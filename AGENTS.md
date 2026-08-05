@@ -6,6 +6,8 @@ This file provides guidance to agents when working with code in this repository.
 Pre-implementation — only the spec (`rakuten_pricing_saas_requirements.md`) and `.env.example` exist. No source code yet.
 
 ## Planned Stack
+
+### Backend
 - **Language / Framework:** Python 3 + FastAPI (async preferred over sync routes)
 - **ORM:** SQLAlchemy (async flavour — `asyncpg` driver shown in `.env.example`)
 - **DB:** PostgreSQL (Neon or Supabase free tier) — JSONB for rule storage, RLS for tenant isolation
@@ -13,6 +15,14 @@ Pre-implementation — only the spec (`rakuten_pricing_saas_requirements.md`) an
 - **Worker:** Celery or RQ (background rule evaluation + LINE notification dispatch)
 - **Scheduler:** GitHub Actions cron **or** APScheduler/Celery beat (hourly/daily crawl trigger)
 - **Deploy:** Render.com / Fly.io / Railway (free tier — no persistent process assumed on Render)
+
+### Frontend (served by FastAPI — no separate build step)
+- **Template Engine:** Jinja2 (FastAPI built-in via `Jinja2Templates`) — renders HTML server-side
+- **Dynamic UI / Async Communication:** HTMX — partial page updates via `hx-get` / `hx-post` attributes; no custom JS required for standard CRUD flows
+- **CSS Framework:** Tailwind CSS (CDN `<script>` tag — zero build tooling, no Node.js required)
+- **Charts:** Chart.js (CDN) — competitor price-history timeline and recommended-price trend graphs
+
+**Rationale:** Eliminates Node.js / React build pipelines entirely.  The FastAPI process serves both the JSON API (`/api/v1/...`) and the HTML UI (`/ui/...`) from a single Render.com free-tier dyno.  HTMX endpoints return HTML fragments; JSON API endpoints remain untouched for future mobile/external consumers.
 
 ## Environment Variables (from `.env.example`)
 ```
@@ -49,6 +59,15 @@ PORT=8000
 ### Notification
 - LINE push is dispatched **after** the audit log commit, queued via Redis/Celery — not inline in the HTTP request
 - Triggered only on: (a) new all-time low detected, (b) recommended price computed by rule engine
+
+### Frontend — Architecture Constraints
+- HTML UI routes live under `/ui/...`; they are **separate from** the JSON API routes under `/api/v1/...`
+- Jinja2 templates reside in `app/templates/`; static files (none expected — all via CDN) in `app/static/`
+- HTMX partial-update endpoints must return **HTML fragments only** (not full pages); use a shared `_base.html` layout template
+- Tailwind CSS and Chart.js are loaded via CDN `<script>`/`<link>` tags in `_base.html` — **do not add a `package.json`, `node_modules/`, or any JS build config to this repository**
+- JWT auth for UI: store access token in an `httpOnly` cookie (set by `/ui/auth/login`); the HTMX fragments read it automatically — do not expose the token in `localStorage` or URL params
+- HTMX requests that require auth must include `HX-Request: true` header; server validates the cookie-based JWT before returning the fragment, same `get_current_user` dependency as the JSON API
+- Chart.js data is fetched via a dedicated lightweight JSON endpoint (`GET /api/v1/histories/...`) called from a minimal inline `<script>` block inside the chart template fragment — this is the **only** place custom JS is permitted
 
 ## Key DB Models
 `Tenants` → `Users` (RBAC: OWNER / MANAGER / VIEWER) → `My_Products` → `Product_Mappings` (bridge) → `Competitor_Products`

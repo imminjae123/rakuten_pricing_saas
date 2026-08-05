@@ -1,0 +1,526 @@
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>このシステム、結局何をするもの？</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Hiragino Sans", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #1f2328;
+    background: #ffffff;
+    padding: 32px 16px 56px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  /* ── Hero ── */
+  .hero {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-bottom: 36px;
+    text-align: center;
+  }
+  .hero h1 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .hero p  { color: #57606a; font-size: 13.5px; }
+
+  /* ── Section headers ── */
+  .section {
+    margin-bottom: 40px;
+  }
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  .section-icon {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .icon-blue   { background: #dbeafe; }
+  .icon-green  { background: #dcfce7; }
+  .icon-purple { background: #ede9fe; }
+  .section-head h2 { font-size: 16px; font-weight: 700; }
+  .section-head .sub { font-size: 12px; color: #57606a; font-weight: 400; margin-top: 1px; }
+
+  /* ── Cards ── */
+  .card {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+  }
+  .card h3 {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .card p, .card li { font-size: 13.5px; color: #1f2328; }
+  .card ul { padding-left: 18px; }
+  .card li { margin-bottom: 4px; }
+
+  /* ── Before / After ── */
+  .ba-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .ba-box {
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+  .ba-before { background: #fee2e2; border: 1px solid #fca5a5; }
+  .ba-after  { background: #dcfce7; border: 1px solid #86efac; }
+  .ba-label  { font-size: 11px; font-weight: 700; margin-bottom: 6px; color: #57606a; letter-spacing: .05em; }
+  .ba-before .ba-label { color: #991b1b; }
+  .ba-after  .ba-label { color: #166534; }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+  .flow-step {
+    flex: 1;
+    min-width: 110px;
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 12px 10px;
+    text-align: center;
+    font-size: 12.5px;
+    position: relative;
+  }
+  .flow-step .step-num {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #3b82d4;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 20px;
+    margin-bottom: 5px;
+  }
+  .flow-step .step-title { font-weight: 700; font-size: 12px; display: block; margin-bottom: 3px; }
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    color: #57606a;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* ── Example box ── */
+  .example {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-left: 4px solid #f59e0b;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 13px;
+  }
+  .example strong { color: #92400e; }
+
+  /* ── Role table ── */
+  .role-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 12px; }
+  .role-table th { background: #f7f8fa; border: 1px solid #e5e7eb; padding: 7px 10px; text-align: left; font-weight: 700; }
+  .role-table td { border: 1px solid #e5e7eb; padding: 6px 10px; vertical-align: top; }
+  .role-table tr:nth-child(even) td { background: #fafbfc; }
+
+  /* ── Highlight quote ── */
+  .highlight {
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #3b82d4;
+    background: #f7f8fa;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 13.5px;
+  }
+  .highlight.green  { border-left-color: #22c55e; }
+  .highlight.purple { border-left-color: #7c5cd8; }
+
+  /* ── Summary table ── */
+  .summary { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 14px; }
+  .summary th { background: #1f2328; color: #fff; padding: 8px 12px; text-align: left; }
+  .summary td { border: 1px solid #e5e7eb; padding: 7px 12px; vertical-align: top; }
+  .summary tr:nth-child(even) td { background: #fafbfc; }
+
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 32px 0; }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 12px;
+    color: #57606a;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+
+<div class="hero">
+  <h1>このシステム、結局何をするもの？</h1>
+  <p>楽天市場に出店している「お店の店長さん」のために作った、<br />
+  <strong>「ライバル店の値段をずっと見張って、自動でベストな価格を出してくれるアシスタント」</strong>です。</p>
+</div>
+
+
+
+
+
+<div class="section">
+  <div class="section-head">
+    <div class="section-icon icon-blue">🏪</div>
+    <div>
+      <h2>視点①：ユーザー（店舗の店長）として</h2>
+      <div class="sub">このアプリを使うと何ができる？ どんな嬉しいことがある？</div>
+    </div>
+  </div>
+
+  
+  <div class="ba-grid">
+    <div class="ba-box ba-before">
+      <div class="ba-label">▼ このシステムがない時</div>
+      毎朝ブラウザでライバルの商品ページを1件ずつ手で開いて値段をメモ。<br />
+      「あ、また値下げされてる…」と気づくのが夜。すでに機会損失。
+    </div>
+    <div class="ba-box ba-after">
+      <div class="ba-label">✓ このシステムがある時</div>
+      寝ている間にシステムが全店舗の価格を自動チェック。<br />
+      朝起きたら「推奨価格は ¥4,490 です」という LINE が届いている。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🎯 できること① — ライバル商品を「見張りリスト」に登録する</h3>
+    <p>
+      自分の商品「ボールペン10本セット」に対して、ライバルの楽天ショップの同じ商品を1件〜何件でも紐づけられます。<br />
+      「このライバル店の価格が下がったら教えて」というリストを作るイメージです。
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>📋 できること② — 「価格ルール」をマイルールで決める</h3>
+    <p>値段をどう決めるかを、自分のルールとして登録できます。難しいプログラミングは不要です。</p>
+    <div class="example">
+      <strong>ルール例：</strong>「見張りリストの中で一番安い競合より、10円だけ安くする。<br />
+      ただし、ウチの仕入れ値（¥3,000）＋最低利益（¥500）＝ <strong>¥3,500 を絶対に下回らない</strong>。」
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🧪 できること③ — 「もし競合が ¥4,200 になったら？」をシミュレーションできる</h3>
+    <p>
+      ルールを保存する前に「仮の競合価格」を入力してテストできます。<br />
+      「この条件だと ¥4,190 を推奨。利益は ¥1,190 になります」と即座に答えが出ます。<br />
+      <strong>実際の価格は変わりません</strong>。あくまで計算の「試し打ち」です。
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>📱 できること④ — 価格が変わるべき時、LINE で通知が来る</h3>
+    <p>
+      競合が「過去最安値」を更新したとき、またはルールが発動して推奨価格が計算されたとき、<br />
+      自動的に LINE にプッシュ通知が届きます。アプリを開きっぱなしにする必要はありません。
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>👥 できること⑤ — スタッフに役割ごとの権限を与えられる</h3>
+    <table class="role-table">
+      <tr><th>役割</th><th>立場のイメージ</th><th>できること</th></tr>
+      <tr>
+        <td><strong>OWNER<br />（店長）</strong></td>
+        <td>全権限を持つ経営者</td>
+        <td>ルール設定・原価入力・スタッフ追加・全ての閲覧</td>
+      </tr>
+      <tr>
+        <td><strong>MANAGER<br />（副店長）</strong></td>
+        <td>現場の責任者</td>
+        <td>商品登録・ルール設定・閲覧（原価も見える）</td>
+      </tr>
+      <tr>
+        <td><strong>VIEWER<br />（アルバイト）</strong></td>
+        <td>見るだけのスタッフ</td>
+        <td>ダッシュボードや価格履歴の閲覧のみ。<br /><span style="color:#991b1b">原価・利益率は見えない</span></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<hr />
+
+
+
+
+<div class="section">
+  <div class="section-head">
+    <div class="section-icon icon-green">⚙️</div>
+    <div>
+      <h2>視点②：バックエンド（裏方・計算エンジン）として</h2>
+      <div class="sub">裏で動くシステムは、毎日どんな仕事をこなしているのか？</div>
+    </div>
+  </div>
+
+  <div class="highlight">
+    バックエンドは「<strong>お店が閉まっている夜中も休まず働く、超優秀なスタッフチーム</strong>」のようなものです。<br />
+    店長が指示した「ルール」に従って、情報収集・計算・通知を全て自動でこなします。
+  </div>
+
+  
+  <p style="font-weight:700;margin:16px 0 8px">▼ バックエンドが1時間ごとに繰り返す仕事の流れ</p>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="step-num">1</div>
+      <span class="step-title">価格の見回り</span>
+      楽天市場に問い合わせて競合の最新価格を収集
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-num">2</div>
+      <span class="step-title">価格の記録</span>
+      収集した価格を「価格台帳」に書き込む（上書きではなく追記）
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-num">3</div>
+      <span class="step-title">ルール計算</span>
+      店長のルールに照らして推奨価格を計算
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-num">4</div>
+      <span class="step-title">記録 + 通知</span>
+      計算結果を保存し、LINEで通知を送る
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🔍 仕事①「価格の見回りスタッフ」— でも礼儀正しく</h3>
+    <p>
+      楽天のAPIという「情報の窓口」に問い合わせて価格を収集します。<br />
+      ただし楽天側には「<strong>1秒間に1回しか問い合わせてはいけない</strong>」というルールがあります。<br />
+      そこでシステムは、1秒ごとにきっちり間隔を空けて問い合わせます。<br />
+      <span style="color:#57606a">例え：混雑したチケット窓口で、横入りせず1人ずつ並んで聞くイメージ。</span>
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>🧮 仕事②「計算スタッフ」— 3つのステップを必ず守る</h3>
+    <p>推奨価格の計算は、<strong>必ずこの順番</strong>で行います。</p>
+    <ul>
+      <li><strong>Step 1：</strong> ライバルの最安値を調べる（例：¥4,500）</li>
+      <li><strong>Step 2：</strong> ルール通りに計算する（例：¥4,500 − ¥10 = <strong>¥4,490</strong>）</li>
+      <li><strong>Step 3：</strong> 「絶対に下回ってはいけない価格（原価＋最低利益）」を確認する</li>
+    </ul>
+    <div class="example">
+      <strong>フロア発動の例：</strong><br />
+      ライバルが急激に値下げして ¥3,200 になったとします。<br />
+      ルール通りに計算すると ¥3,190 ですが、<br />
+      「原価¥3,000 ＋ 最低利益¥500 ＝ <strong>¥3,500</strong> が絶対ライン」なので、<br />
+      推奨価格は <strong>¥3,500</strong>（最低保証価格）で固定されます。赤字にはなりません。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📦 仕事③「配達スタッフ」— 通知は計算が終わった後</h3>
+    <p>
+      LINE 通知は計算・記録が完全に終わってから、別の「配達専門スタッフ」に仕事を渡します。<br />
+      こうすることで、「通知を送っている間に次の計算が詰まる」という事態を防ぎます。<br />
+      <span style="color:#57606a">例え：レジでの会計と、商品の梱包は別のスタッフが担当するイメージ。</span>
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>📓 仕事④「記録スタッフ」— 全ての出来事をノートに書き続ける</h3>
+    <p>
+      誰がいつルールを変えたか、システムがいつ何の根拠で価格を計算したか、<br />
+      <strong>全ての出来事を「監査ノート」に書き続けます。絶対に消せません。</strong><br />
+      後からトラブルになっても「この日にこのルールが発動して¥4,490を推奨した」と証明できます。
+    </p>
+    <div class="example">
+      <strong>監査ノートの1行の例：</strong><br />
+      「2025年1月15日 11:00 ／ システム自動 ／ ルール『最安値より10円安く』が発動 ／
+      競合価格¥4,500 → 計算結果¥4,490 → 防衛価格発動なし」
+    </div>
+  </div>
+</div>
+
+<hr />
+
+
+
+
+<div class="section">
+  <div class="section-head">
+    <div class="section-icon icon-purple">🏢</div>
+    <div>
+      <h2>視点③：データベース（倉庫・記録係）として</h2>
+      <div class="sub">情報をどう保管し、他のお店のデータと混ざらないように守っているのか？</div>
+    </div>
+  </div>
+
+  <div class="highlight purple">
+    データベースは「<strong>鍵付き個室を持つ大型貸し倉庫</strong>」のようなものです。<br />
+    建物（データベース）は共有しているのに、各テナント（入居者）は<strong>自分の部屋しか開けられない</strong>仕組みになっています。
+  </div>
+
+  <div class="card">
+    <h3>🔑 テナント隔離の仕組み — 「鍵付き個室」ルール</h3>
+    <p>
+      このシステムには複数の「お店（テナント）」が同時に入居しています。<br />
+      <strong>「A店の店長」は絶対に「B店の原価データ」を見ることができません。</strong><br />
+      これはアプリの設定だけでなく、データベースの深いところにある「自動鍵システム」でも守られています。
+    </p>
+    <div class="example">
+      <strong>技術的な例え（難しくない版）：</strong><br />
+      データベースに問い合わせる時、システムは必ず「今ログインしているのはA店です」という
+      <strong>「入館証」を渡します</strong>。<br />
+      データベースは入館証を確認して、A店の棚のデータしか渡しません。<br />
+      アプリ側でバグがあっても、データベース側で二重にブロックしているので安心です。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🗄️ 8つの「棚」で情報を整理している</h3>
+    <table class="role-table">
+      <tr><th>棚の名前</th><th>何を入れる棚か</th><th>特別なルール</th></tr>
+      <tr>
+        <td><strong>テナント台帳</strong></td>
+        <td>入居しているお店の基本情報（店名・ショップコードなど）</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><strong>スタッフ台帳</strong></td>
+        <td>ログインできる人の情報・役割（店長/副店長/アルバイト）</td>
+        <td>パスワードは必ず「解読不能な形」に変換して保存</td>
+      </tr>
+      <tr>
+        <td><strong>自社商品台帳 ⚠️</strong></td>
+        <td>モニタリング対象の自社商品と、<span style="color:#991b1b"><strong>原価・最低利益（機密情報）</strong></span></td>
+        <td>アルバイトには原価が見えない。個室の中でも一番厳重な金庫</td>
+      </tr>
+      <tr>
+        <td><strong>競合商品カタログ</strong></td>
+        <td>楽天市場で見張っているライバル商品の情報</td>
+        <td>複数のお店が同じ競合を監視していても、1件分だけ保存（重複なし）</td>
+      </tr>
+      <tr>
+        <td><strong>紐づけ台帳</strong></td>
+        <td>「自社のこの商品」と「競合のあの商品」のペアリスト</td>
+        <td>お店ごとに管理。他のお店のペアリングは見えない</td>
+      </tr>
+      <tr>
+        <td><strong>価格ルール台帳</strong></td>
+        <td>店長が設定した「どう値段を決めるか」のルール一式</td>
+        <td>ルールの「条件式」はひとまとまりのメモ形式で保存（自由に書き換えやすい）</td>
+      </tr>
+      <tr>
+        <td><strong>価格履歴台帳 🔒</strong></td>
+        <td>競合価格・推奨価格の時系列記録（時刻つきスナップショット）</td>
+        <td><strong>書き込み専用。過去のデータは一切修正・削除できない</strong></td>
+      </tr>
+      <tr>
+        <td><strong>監査ノート 🔒</strong></td>
+        <td>誰が何をいつ操作したか・システムがどう計算したかの全記録</td>
+        <td><strong>書き込み専用。過去のデータは一切修正・削除できない</strong></td>
+      </tr>
+    </table>
+    <p style="margin-top:8px;font-size:12.5px;color:#57606a">
+      🔒 のついた棚は「追記専用ノート」です。データベース自体の仕組みで、書き換えようとすると自動的に拒否されます。
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>🚫 「追記専用ノート」が大切な理由</h3>
+    <p>
+      価格履歴と監査ノートが修正・削除できないのには理由があります。
+    </p>
+    <ul>
+      <li>「本当に昨日の価格はいくらだったのか？」を後から正確に証明できる</li>
+      <li>悪意のある操作（「あの推奨価格の記録を消してほしい」）を防げる</li>
+      <li>スタッフのミスでも「いつ誰がルールを変えたか」を必ずたどれる</li>
+    </ul>
+    <div class="example">
+      <strong>例え：</strong> 病院のカルテと同じです。<br />
+      「この日にこの治療をした」という記録は後から消せません。<br />
+      追記することはできますが、過去の記録は永久に残ります。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🗂️ ルールの「条件式」は自由メモ形式で保存する理由</h3>
+    <p>
+      価格ルールの「条件」（例：「最安値より10円安く、ただし利益は500円以上確保」）は、<br />
+      データベースのひとつのマス目に<strong>「まとめてメモとして」保存しています</strong>。<br />
+      バラバラに分割して保存しないのには理由があります。
+    </p>
+    <ul>
+      <li>「5円安く」→「10円安く」と変えるときに、条件全体をまるごと書き換えるだけで済む</li>
+      <li>「AND条件を追加する」「新しいルールタイプを作る」がデータベース設計の変更なしにできる</li>
+      <li>読んだときに「このルールが何をするのか」ひと目でわかる</li>
+    </ul>
+    <div class="example">
+      <strong>例え：</strong> レシピを保存するとき、「材料」「手順」「火加減」をバラバラのノートに分けるより、<br />
+      「1枚のレシピカード」にまとめて書いておく方が管理しやすいのと同じです。
+    </div>
+  </div>
+</div>
+
+<hr />
+
+
+<h2 style="font-size:15px;font-weight:700;margin-bottom:12px">まとめ：3つの視点を1枚で整理</h2>
+<table class="summary">
+  <tr>
+    <th>視点</th>
+    <th>例え</th>
+    <th>このシステムでの役割</th>
+  </tr>
+  <tr>
+    <td>🏪 店長<br />（ユーザー）</td>
+    <td>商店街のお店のオーナー</td>
+    <td>ライバルの見張りリストを作り、価格ルールを登録する。結果は LINE で受け取るだけ。</td>
+  </tr>
+  <tr>
+    <td>⚙️ バックエンド<br />（裏方）</td>
+    <td>夜中も休まず働くスタッフチーム</td>
+    <td>毎時ライバルの価格を収集 → ルール通りに計算 → 結果を記録 → LINE 通知を送る</td>
+  </tr>
+  <tr>
+    <td>🏢 データベース<br />（倉庫）</td>
+    <td>鍵付き個室がある貸し倉庫</td>
+    <td>8つの棚でデータを整理。他テナントの棚は絶対に開けられない。過去の記録は消せない。</td>
+  </tr>
+</table>
+
+<footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>

@@ -16,27 +16,45 @@
 費用を最小化（0円）しながら、商用サービスレベルのバックエンドアーキテクチャを経験できるように構成します。
 
 ### 2.1. Backend (API & ビジネスロジック)
-* **言語 & フレームワーク:** Python (FastAPI) または Java (Spring Boot)
-  * *非同期処理 (Async) およびデータハンドリングが多い点を考慮し、Python + FastAPIの組み合わせを推奨します。*
-* **ORM:** SQLAlchemy (Python) または JPA (Java)
-* **API規格:** RESTful API
+* **言語 & フレームワーク:** Python 3 + FastAPI（確定）
+  * *非同期処理 (Async) およびデータハンドリングが多い点を考慮し、Python + FastAPIの組み合わせを採用します。*
+* **ORM:** SQLAlchemy 2.0 (async flavour、`asyncpg` ドライバー使用)
+* **API規格:** RESTful API (`/api/v1/...`)
 
-### 2.2. Database & Caching
+### 2.2. Frontend (FastAPI統合型 — ビルド環境なし)
+
+> **方針:** Node.js / React などの独立したフロントエンドビルド環境を排除し、FastAPIサーバー1プロセスでAPIとUIの両方を提供します。0円インフラ（Render.com 等）上で単一 dyno としてデプロイ・運用できます。
+
+| レイヤー | 採用技術 | 選定理由 |
+|---|---|---|
+| **テンプレートエンジン** | **Jinja2** (FastAPI 内蔵 `Jinja2Templates`) | サーバーサイドHTML生成。`package.json`・`node_modules`・ビルドコマンドが不要 |
+| **動的UI / 非同期通信** | **HTMX** (CDN) | `hx-get` / `hx-post` 属性のみでSPA的な部分更新を実現。カスタムJSをほぼ書かない |
+| **CSSフレームワーク** | **Tailwind CSS** (CDN `<script>` タグ) | CDN利用でビルド設定ゼロ。Node.js不要のままユーティリティCSSが使える |
+| **グラフ描画** | **Chart.js** (CDN) | 競合価格変動タイムライン・推奨価格トレンドの描画に使用 |
+
+* HTMLページルートは `/ui/...` に配置し、JSONエンドポイント (`/api/v1/...`) と完全に分離する
+* HTMX部分更新レスポンスはHTMLフラグメントのみを返す（フルページレスポンス禁止）
+* JWT認証はUI向けに `httpOnly` Cookie で管理する（`localStorage` やURLパラメーターへのトークン露出禁止）
+* Chart.js用データ取得は `GET /api/v1/histories/...` への最小限の `<script>` ブロックのみ許可する
+* `package.json`・`node_modules/`・Webpack/Vite等のビルド設定ファイルはリポジトリに追加しない
+
+### 2.3. Database & Caching
 * **Relational DB:** PostgreSQL (無料ホスティング: Neon または Supabase)
   * RLS (Row-Level Security) および JSONB型を活用したルールエンジンの構築に最適化
 * **In-Memory Cache:** Redis (無料ホスティング: Upstash)
   * 楽天APIレスポンスのキャッシング、Rate Limit制御、非同期タスクキューの状態管理
 
-### 2.3. Data Pipeline & Worker
+### 2.4. Data Pipeline & Worker
 * **バッチスケジューラ:** GitHub Actions (毎日/毎時 定期クローリングのトリガー) または Celery/APScheduler
 * **メッセージキュー (非同期):** Redis Queue (RQ) または Celery (バックグラウンドでのセラー別ルール評価および通知送信処理)
 
-### 2.4. 外部API連携
+### 2.5. 外部API連携
 * **データ収集:** 楽天ウェブサービス 楽天市場商品検索API (`IchibaItem/Search`)
 * **通知送信:** LINE Messaging API (過去最安値更新時、対応価格算出時にセラーへプッシュ通知)
 
-### 2.5. インフラデプロイ (Hosting)
+### 2.6. インフラデプロイ (Hosting)
 * **サーバーデプロイ:** Render.com, Fly.io, または Railway (Free Tier)
+* **デプロイ単位:** FastAPI 単一プロセス（APIサーバー + UIサーバーを兼任）
 
 ---
 
