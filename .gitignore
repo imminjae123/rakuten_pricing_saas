@@ -1,0 +1,97 @@
+# ==========================================
+# 1. Environment & Sensitive Data (보안/환경변수)
+# ==========================================
+# 라쿠텐 API Key, DB 접속 정보, LINE API Token 등이 담긴 파일 (절대 Commit 금지!)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
+# ==========================================
+# 2. Python & Virtual Environment (파이썬/가상환경)
+# ==========================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments (가상환경 디렉터리)
+venv/
+.venv/
+env/
+.env/
+env.bak/
+venv.bak/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ==========================================
+# 3. Database & Caching (데이터베이스 및 캐시)
+# ==========================================
+# 로컬 테스트용 SQLite/PostgreSQL 데이터 Dump 파일
+*.sqlite3
+*.db
+*.sql
+*.dump
+
+# Redis / Celery dump files
+dump.rdb
+
+# ==========================================
+# 4. Testing & Coverage (테스트 및 커버리지)
+# ==========================================
+.pytest_cache/
+.coverage
+htmlcov/
+.nox/
+.tox/
+.hypothesis/
+
+# ==========================================
+# 5. IDE & OS Junk Files (에디터 및 OS 설정)
+# ==========================================
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# PyCharm / JetBrains
+.idea/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSSharedFileList
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ==========================================
+# 6. Logs & Temporary Files (로그 및 임시파일)
+# ==========================================
+logs/
+*.log
+*.tmp
+*.temp
