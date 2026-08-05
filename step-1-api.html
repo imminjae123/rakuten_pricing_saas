@@ -1,0 +1,351 @@
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>STEP 1 — 楽天API 動作確認ガイド</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Hiragino Sans", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.75; color: #1f2328;
+    background: #fff; padding: 32px 16px 56px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .meta { color: #57606a; font-size: 12.5px; margin-bottom: 28px; }
+
+  /* step badge */
+  .step-wrap { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 28px; }
+  .step-num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #3b82d4; color: #fff;
+    font-size: 14px; font-weight: 700; line-height: 32px;
+    text-align: center; flex-shrink: 0; margin-top: 2px;
+  }
+  .step-body { flex: 1; }
+  .step-body h2 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+
+  /* code / pre */
+  code {
+    font-family: "SFMono-Regular", Consolas, monospace; font-size: 12.5px;
+    background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 3px;
+    padding: 1px 5px;
+  }
+  pre {
+    background: #1f2328; color: #e6edf3;
+    border-radius: 6px; padding: 14px 16px;
+    overflow-x: auto; font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12.5px; line-height: 1.7; margin: 10px 0 12px;
+  }
+  pre .cmt   { color: #8b949e; font-style: italic; }
+  pre .grn   { color: #7ee787; }
+  pre .yel   { color: #e3b341; }
+  pre .blu   { color: #79c0ff; }
+  pre .str   { color: #a5d6ff; }
+  pre .red   { color: #ff7b72; }
+  pre .prompt{ color: #8b949e; user-select: none; }
+
+  /* callout */
+  .callout {
+    border: 1px solid #e5e7eb; border-left: 4px solid #3b82d4;
+    background: #f7f8fa; border-radius: 4px;
+    padding: 10px 14px; margin: 10px 0; font-size: 13.5px;
+  }
+  .callout.warn  { border-left-color: #f59e0b; background: #fffbeb; }
+  .callout.ok    { border-left-color: #22c55e; background: #f0fdf4; }
+  .callout.crit  { border-left-color: #ef4444; background: #fff5f5; }
+
+  /* card */
+  .card {
+    border: 1px solid #e5e7eb; border-radius: 6px;
+    padding: 14px 16px; margin: 10px 0; background: #f7f8fa;
+    font-size: 13.5px;
+  }
+  .card h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 6px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+  th { background: #f7f8fa; border: 1px solid #e5e7eb; padding: 6px 10px; text-align: left; font-weight: 700; }
+  td { border: 1px solid #e5e7eb; padding: 6px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafbfc; }
+
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 28px 0; }
+  ul, ol { padding-left: 18px; margin-bottom: 8px; }
+  li { margin-bottom: 4px; }
+  p  { margin-bottom: 8px; }
+
+  .file-path {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12px; color: #57606a;
+    background: #f7f8fa; border: 1px solid #e5e7eb;
+    border-radius: 3px; padding: 2px 6px;
+  }
+
+  footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #57606a; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>STEP 1 — 楽天API 動作確認ガイド</h1>
+<p class="meta">test_rakuten_api.py を実行して商品価格を取得するまでの完全手順</p>
+
+<div class="callout ok">
+  このSTEP 1が成功すると「楽天APIを安全に呼び出せる基盤」ができます。<br />
+  STEP 2（FastAPI + DB保存）への土台となる最重要ステップです。
+</div>
+
+
+<div class="step-wrap">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <h2>.env ファイルを作成してAPIキーを設定する</h2>
+
+    <p>
+      <span class="file-path">.env.example</span> というファイルがすでにプロジェクトにあります。<br />
+      これをコピーして <span class="file-path">.env</span> という名前で保存し、APIキーを書き込みます。
+    </p>
+
+    <div class="callout crit">
+      <strong>⚠️ 重要：<code>.env</code> は絶対に Git にコミットしてはいけません。</strong><br />
+      プロジェクトの <code>.gitignore</code> に <code>.env</code> が登録済みなので、
+      正しく操作すれば自動的にコミットされません。<code>.env.example</code> は安全にコミットできます。
+    </div>
+
+    <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">① ターミナルでコピー（PowerShell）</h3>
+    <pre><span class="prompt">PS&gt; </span><span class="blu">cd</span> rakuten_pricing_saas
+<span class="prompt">PS&gt; </span><span class="blu">Copy-Item</span> .env.example .env</pre>
+
+    <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">② .env をエディタで開いて APIキーを入力</h3>
+    <p><span class="file-path">rakuten_pricing_saas/.env</span> を VS Code等で開き、以下の行を編集します：</p>
+    <pre><span class="cmt"># 変更前（コピー直後の状態）</span>
+RAKUTEN_APPLICATION_ID=<span class="yel">your_rakuten_app_id_here</span>
+
+<span class="cmt"># 変更後（あなたのアプリIDに書き換える）</span>
+RAKUTEN_APPLICATION_ID=<span class="grn">1234567890</span>  <span class="cmt">← ここに実際のIDを入力</span></pre>
+
+    <div class="callout warn">
+      <strong>楽天アプリIDの確認場所：</strong><br />
+      <a href="https://webservice.rakuten.co.jp/app/list" style="color:#3b82d4">https://webservice.rakuten.co.jp/app/list</a> にログインし、
+      アプリ一覧から「アプリID（applicationId）」をコピーしてください。
+    </div>
+
+    <div class="card">
+      <h3>📄 .env の全体像（今回使う最低限の設定）</h3>
+<pre style="margin-top:8px">APP_ENV=<span class="str">development</span>
+PORT=<span class="yel">8000</span>
+
+<span class="cmt"># ↓ ここだけ今すぐ入力すればOK</span>
+RAKUTEN_APPLICATION_ID=<span class="grn">あなたのアプリID</span>
+
+<span class="cmt"># ↓ 以下はSTEP 2以降で設定するので今は空欄でOK</span>
+DATABASE_URL=postgresql+asyncpg://...
+REDIS_URL=redis://localhost:6379/0
+LINE_CHANNEL_ACCESS_TOKEN=
+SECRET_KEY=</pre>
+    </div>
+  </div>
+</div>
+
+
+<div class="step-wrap">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <h2>仮想環境を作成してライブラリをインストールする</h2>
+
+    <p>
+      Python の「仮想環境」とは、このプロジェクト専用のライブラリ置き場です。<br />
+      他のプロジェクトと混在しないように、必ず仮想環境の中で作業します。
+    </p>
+
+    <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">① 仮想環境を作成して有効化（初回のみ）</h3>
+    <pre><span class="cmt"># rakuten_pricing_saas ディレクトリの中で実行</span>
+<span class="prompt">PS&gt; </span>python -m venv .venv
+
+<span class="cmt"># 有効化（Windows PowerShell）</span>
+<span class="prompt">PS&gt; </span>.venv\Scripts\Activate.ps1
+
+<span class="cmt"># 有効化に成功すると、プロンプトの先頭に (.venv) と表示される</span>
+<span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span><span class="cmt"> ← このように変わればOK</span></pre>
+
+    <div class="callout warn">
+      <strong>「実行ポリシー」エラーが出た場合：</strong><br />
+      PowerShell を管理者として開き、以下を一度だけ実行してください：<br />
+      <code>Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser</code>
+    </div>
+
+    <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">② 必要なライブラリをインストール</h3>
+    <pre><span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>pip install httpx python-dotenv</pre>
+
+    <table>
+      <tr><th>ライブラリ</th><th>役割</th><th>なぜこれ？</th></tr>
+      <tr>
+        <td><code>httpx</code></td>
+        <td>楽天APIへのHTTPリクエスト送信</td>
+        <td>後でFastAPIの非同期処理（async）でも同じライブラリを使う。requests より将来性が高い</td>
+      </tr>
+      <tr>
+        <td><code>python-dotenv</code></td>
+        <td><code>.env</code> ファイルの読み込み</td>
+        <td>APIキーをコードに直書きせず安全に管理できる</td>
+      </tr>
+    </table>
+
+    <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">③ インストール確認</h3>
+    <pre><span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>pip list
+<span class="cmt"># 以下が含まれていればOK</span>
+httpx          0.2x.x
+python-dotenv  1.x.x</pre>
+  </div>
+</div>
+
+
+<div class="step-wrap">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <h2>スクリプトを実行して動作確認する</h2>
+
+    <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">① 対話モードで実行（キーワードを入力）</h3>
+    <pre><span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>python test_rakuten_api.py
+
+<span class="cmt"># プロンプトが表示される</span>
+検索キーワードを入力してください（例: Nintendo Switch）: <span class="yel">Nintendo Switch</span></pre>
+
+    <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">② コマンドライン引数で直接実行（スペース入りは引用符で囲む）</h3>
+    <pre><span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>python test_rakuten_api.py <span class="str">"Nintendo Switch"</span>
+<span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>python test_rakuten_api.py <span class="str">"ボールペン 10本"</span></pre>
+
+    <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">③ 成功時の出力例</h3>
+    <pre><span class="grn">🔍 「Nintendo Switch」で楽天市場を検索中...
+
+────────────────────────────────────────────────────────────
+  検索結果 上位 3 件
+────────────────────────────────────────────────────────────
+
+  [1]  Nintendo Switch 本体 Joy-Con (L) ネオンブルー/(R) ネオンレッド
+       価格  : ¥<span class="yel">32,978</span>（税込）
+       店舗  : ○○ショップ
+       URL   : https://item.rakuten.co.jp/...
+
+  [2]  Nintendo Switch（有機ELモデル） Joy-Con(L)/(R) ホワイト
+       価格  : ¥<span class="yel">37,980</span>（税込）
+       店舗  : △△電機
+       URL   : https://item.rakuten.co.jp/...
+
+  [3]  【中古】Nintendo Switch 本体のみ
+       価格  : ¥<span class="yel">18,500</span>（税込）
+       店舗  : □□リサイクル
+       URL   : https://item.rakuten.co.jp/...
+
+────────────────────────────────────────────────────────────
+  ✅ 取得完了！（合計 17,429 件がヒットしました）
+────────────────────────────────────────────────────────────</span></pre>
+  </div>
+</div>
+
+
+<div class="step-wrap">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <h2>エラーが出た場合のチェックリスト</h2>
+
+    <table>
+      <tr><th>エラーメッセージ</th><th>原因</th><th>解決方法</th></tr>
+      <tr>
+        <td><code>❌ RAKUTEN_APPLICATION_ID が設定されていません</code></td>
+        <td><code>.env</code> ファイルがない、またはIDが <code>your_rakuten_app_id_here</code> のまま</td>
+        <td><code>.env.example</code> を <code>.env</code> にコピーしてIDを正しく入力する</td>
+      </tr>
+      <tr>
+        <td><code>HTTP 401</code></td>
+        <td>Application ID が無効または期限切れ</td>
+        <td>楽天 Web Services にログインしてIDを再確認する</td>
+      </tr>
+      <tr>
+        <td><code>HTTP 429</code></td>
+        <td>1秒間に複数回リクエストを送った（レートリミット）</td>
+        <td>少し待ってから再実行する（本番では1秒1回制限を守る）</td>
+      </tr>
+      <tr>
+        <td><code>ModuleNotFoundError: No module named 'httpx'</code></td>
+        <td>仮想環境が有効化されていない、またはインストール未完了</td>
+        <td>仮想環境を有効化（<code>.venv\Scripts\Activate.ps1</code>）してから <code>pip install httpx python-dotenv</code></td>
+      </tr>
+      <tr>
+        <td><code>TimeoutException</code></td>
+        <td>ネットワーク接続の問題</td>
+        <td>インターネット接続を確認して再実行する</td>
+      </tr>
+      <tr>
+        <td>検索結果が <code>0件</code></td>
+        <td>キーワードのスペルミス、または日本語変換の問題</td>
+        <td>英語キーワード（例: <code>Switch</code>）で試してみる</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<hr />
+
+
+<h2 style="font-size:15px;font-weight:700;margin-bottom:12px">📖 スクリプトの構造（何がどこで何をしているか）</h2>
+
+<div class="card">
+  <h3>test_rakuten_api.py の4つのブロック</h3>
+  <table style="margin-top:8px">
+    <tr><th>ブロック</th><th>やっていること</th><th>本番実装との関係</th></tr>
+    <tr>
+      <td>① <code>load_dotenv()</code></td>
+      <td><code>.env</code> を読み込んで<br /><code>RAKUTEN_APPLICATION_ID</code> を取得</td>
+      <td>本番では <code>pydantic-settings</code> の <code>get_settings()</code> が同じ役割をする</td>
+    </tr>
+    <tr>
+      <td>② パラメーター設定</td>
+      <td>検索キーワード・件数・ソート順を辞書で作成</td>
+      <td>本番のクローラー（<code>crawl_service.py</code>）でも同じパラメーターを使う</td>
+    </tr>
+    <tr>
+      <td>③ <code>httpx.get()</code></td>
+      <td>楽天APIにHTTPリクエストを送信してJSONを受け取る</td>
+      <td>本番では <code>httpx.AsyncClient</code>（非同期版）に切り替える</td>
+    </tr>
+    <tr>
+      <td>④ エラーハンドリング</td>
+      <td>401・429・タイムアウトを個別にキャッチして日本語メッセージを表示</td>
+      <td>本番のレートリミット制御（Token Bucket）の前段となる概念</td>
+    </tr>
+  </table>
+</div>
+
+<hr />
+
+
+<h2 style="font-size:15px;font-weight:700;margin-bottom:10px">🗺️ STEP 1 完了後の次のステップ</h2>
+<table>
+  <tr><th>STEP</th><th>内容</th><th>追加要素</th></tr>
+  <tr style="background:#dcfce7">
+    <td><strong>✅ STEP 1</strong></td>
+    <td>楽天APIを呼び出して価格を取得する</td>
+    <td><code>httpx</code>, <code>python-dotenv</code></td>
+  </tr>
+  <tr>
+    <td><strong>STEP 2</strong></td>
+    <td>FastAPI + PostgreSQL に取得した価格を保存する</td>
+    <td><code>FastAPI</code>, <code>SQLAlchemy</code>, <code>asyncpg</code>, <code>Alembic</code></td>
+  </tr>
+  <tr>
+    <td><strong>STEP 3</strong></td>
+    <td>Celery Worker で定期クロールを自動化する</td>
+    <td><code>Celery</code>, <code>Redis</code>, レートリミット</td>
+  </tr>
+  <tr>
+    <td><strong>STEP 4</strong></td>
+    <td>ルールエンジンで推奨価格を計算してLINE通知</td>
+    <td><code>rule_engine.py</code>, <code>line-bot-sdk</code></td>
+  </tr>
+</table>
+
+<footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>
