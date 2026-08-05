@@ -1,0 +1,471 @@
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rakuten Pricing SaaS — API 仕様書</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:13.5px;line-height:1.6;color:#1f2328;background:#fff;padding:32px 16px 56px}
+.page{max-width:800px;margin:0 auto}
+h1{font-size:21px;font-weight:700;margin-bottom:4px}
+.meta{color:#57606a;font-size:12px;margin-bottom:28px}
+h2{font-size:15px;font-weight:700;border-left:4px solid #3b82d4;padding-left:10px;margin:34px 0 12px}
+h3{font-size:13.5px;font-weight:700;margin:20px 0 6px}
+h4{font-size:12.5px;font-weight:600;margin:14px 0 4px;color:#57606a}
+p{margin-bottom:8px}
+code{font-family:"SFMono-Regular",Consolas,monospace;font-size:12px;background:#f7f8fa;border:1px solid #e5e7eb;border-radius:3px;padding:1px 5px}
+pre{background:#f7f8fa;border:1px solid #e5e7eb;border-radius:6px;padding:11px 14px;overflow-x:auto;font-family:"SFMono-Regular",Consolas,monospace;font-size:11.5px;line-height:1.7;margin-bottom:12px;white-space:pre}
+.cmt{color:#57606a;font-style:italic}
+.kw{color:#7c5cd8;font-weight:600}
+.str{color:#166534}
+.num{color:#0550ae}
+.key{color:#0550ae}
+table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:12.5px}
+th{background:#f7f8fa;border:1px solid #e5e7eb;padding:6px 10px;text-align:left;font-weight:600}
+td{border:1px solid #e5e7eb;padding:5px 10px;vertical-align:top}
+tr:nth-child(even) td{background:#fafbfc}
+.badge{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:10px;font-weight:600;margin:1px 2px;white-space:nowrap}
+.b-get{background:#dcfce7;color:#166534}
+.b-post{background:#dbeafe;color:#1d4ed8}
+.b-put{background:#fef3c7;color:#92400e}
+.b-patch{background:#ede9fe;color:#5b21b6}
+.b-del{background:#fee2e2;color:#991b1b}
+.b-owner{background:#fce7f3;color:#9d174d}
+.b-manager{background:#ede9fe;color:#5b21b6}
+.b-viewer{background:#f7f8fa;color:#57606a;border:1px solid #e5e7eb}
+.b-all{background:#f7f8fa;color:#57606a;border:1px solid #e5e7eb}
+.b-sec{background:#fee2e2;color:#991b1b}
+.b-pure{background:#dcfce7;color:#166534}
+.callout{border:1px solid #e5e7eb;border-left:4px solid #3b82d4;background:#f7f8fa;border-radius:4px;padding:9px 13px;margin-bottom:11px;font-size:12.5px}
+.callout.warn{border-left-color:#f59e0b}
+.callout.crit{border-left-color:#ef4444}
+.callout.green{border-left-color:#22c55e}
+hr{border:none;border-top:1px solid #e5e7eb;margin:28px 0}
+.ep-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:5px;flex-wrap:wrap}
+.ep-path{font-family:"SFMono-Regular",Consolas,monospace;font-size:12px;font-weight:600}
+footer{margin-top:48px;padding-top:14px;border-top:1px solid #e5e7eb;text-align:center;font-size:12px;color:#57606a}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Rakuten Pricing SaaS — API 仕様書</h1>
+<p class="meta">FastAPI · RESTful · RBAC (OWNER / MANAGER / VIEWER) · JWT Bearer · API prefix: <code>/api/v1</code></p>
+
+<div class="callout">
+  <strong>共通規則:</strong>
+  全エンドポイントは <code>Authorization: Bearer &lt;access_token&gt;</code> ヘッダーが必要（<code>/auth/register</code> / <code>/auth/login</code> を除く）。
+  エラーは <code>{"detail": "...", "code": "..."}
+  </code> 形式で返す。全レスポンスは <code>application/json</code>。
+</div>
+
+
+<h2>1. 認証・テナント管理 <code>/api/v1/auth/...</code></h2>
+
+<table>
+  <tr><th>メソッド</th><th>パス</th><th>RBAC</th><th>説明</th></tr>
+  <tr>
+    <td><span class="badge b-post">POST</span></td>
+    <td><code>/auth/register</code></td>
+    <td><span class="badge b-all">公開</span></td>
+    <td>テナント新規登録 + 初回 OWNER アカウント作成</td>
+  </tr>
+  <tr>
+    <td><span class="badge b-post">POST</span></td>
+    <td><code>/auth/login</code></td>
+    <td><span class="badge b-all">公開</span></td>
+    <td>メール + パスワード認証 → JWT 発行</td>
+  </tr>
+  <tr>
+    <td><span class="badge b-post">POST</span></td>
+    <td><code>/auth/refresh</code></td>
+    <td><span class="badge b-all">全ロール</span></td>
+    <td>Refresh Token → 新 Access Token 発行</td>
+  </tr>
+  <tr>
+    <td><span class="badge b-get">GET</span></td>
+    <td><code>/auth/me</code></td>
+    <td><span class="badge b-all">全ロール</span></td>
+    <td>現在ログイン中のユーザー情報取得</td>
+  </tr>
+  <tr>
+    <td><span class="badge b-post">POST</span></td>
+    <td><code>/auth/users</code></td>
+    <td><span class="badge b-owner">OWNER</span></td>
+    <td>スタッフ招待 (MANAGER / VIEWER ロール付与)</td>
+  </tr>
+  <tr>
+    <td><span class="badge b-get">GET</span></td>
+    <td><code>/auth/users</code></td>
+    <td><span class="badge b-owner">OWNER</span></td>
+    <td>テナント内スタッフ一覧</td>
+  </tr>
+  <tr>
+    <td><span class="badge b-patch">PATCH</span></td>
+    <td><code>/auth/users/{user_id}</code></td>
+    <td><span class="badge b-owner">OWNER</span></td>
+    <td>スタッフのロール変更 / 無効化</td>
+  </tr>
+</table>
+
+<h3>POST /auth/register</h3>
+<h4>Request</h4>
+<pre>{
+  <span class="key">"shop_name"</span>: <span class="str">"My Rakuten Shop"</span>,
+  <span class="key">"shop_code"</span>: <span class="str">"my-shop-001"</span>,
+  <span class="key">"rakuten_shop_url"</span>: <span class="str">"https://www.rakuten.co.jp/my-shop/"</span>,  <span class="cmt">// optional</span>
+  <span class="key">"contact_email"</span>: <span class="str">"admin@example.com"</span>,
+  <span class="key">"email"</span>: <span class="str">"admin@example.com"</span>,
+  <span class="key">"password"</span>: <span class="str">"Passw0rd!"</span>,
+  <span class="key">"full_name"</span>: <span class="str">"Yamada Taro"</span>
+}</pre>
+<h4>Response 201</h4>
+<pre>{
+  <span class="key">"tenant_id"</span>: <span class="str">"550e8400-..."</span>,
+  <span class="key">"user_id"</span>:   <span class="str">"a3f1b200-..."</span>,
+  <span class="key">"email"</span>:     <span class="str">"admin@example.com"</span>,
+  <span class="key">"role"</span>:      <span class="str">"OWNER"</span>,
+  <span class="key">"access_token"</span>:  <span class="str">"eyJ..."</span>,
+  <span class="key">"refresh_token"</span>: <span class="str">"eyJ..."</span>,
+  <span class="key">"token_type"</span>:    <span class="str">"bearer"</span>
+}</pre>
+
+<h3>POST /auth/login</h3>
+<h4>Request</h4>
+<pre>{
+  <span class="key">"email"</span>:    <span class="str">"admin@example.com"</span>,
+  <span class="key">"password"</span>: <span class="str">"Passw0rd!"</span>
+}</pre>
+<h4>Response 200</h4>
+<pre>{
+  <span class="key">"access_token"</span>:  <span class="str">"eyJ..."</span>,
+  <span class="key">"refresh_token"</span>: <span class="str">"eyJ..."</span>,
+  <span class="key">"token_type"</span>:    <span class="str">"bearer"</span>,
+  <span class="key">"expires_in"</span>:    <span class="num">3600</span>
+}</pre>
+
+<h4>JWT Payload 構造</h4>
+<pre>{
+  <span class="key">"sub"</span>:       <span class="str">"&lt;user_id&gt;"</span>,
+  <span class="key">"tenant_id"</span>: <span class="str">"&lt;tenant_id&gt;"</span>,   <span class="cmt">// RLS SET LOCAL はここから取得</span>
+  <span class="key">"role"</span>:      <span class="str">"OWNER"</span>,
+  <span class="key">"exp"</span>:       <span class="num">1735689600</span>
+}</pre>
+
+<hr />
+
+
+<h2>2. 自社商品・競合商品マッピング <code>/api/v1/products/...</code></h2>
+
+<table>
+  <tr><th>メソッド</th><th>パス</th><th>RBAC</th><th>説明</th></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/products</code></td><td><span class="badge b-all">全ロール</span></td><td>自社商品一覧 (センシティブ項目は VIEWER には非表示)</td></tr>
+  <tr><td><span class="badge b-post">POST</span></td><td><code>/products</code></td><td><span class="badge b-owner">OWNER</span> <span class="badge b-manager">MANAGER</span></td><td>自社商品登録 (原価・マージン含む)</td></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/products/{id}</code></td><td><span class="badge b-all">全ロール</span></td><td>商品詳細 (ロール別フィールドフィルタ)</td></tr>
+  <tr><td><span class="badge b-patch">PATCH</span></td><td><code>/products/{id}</code></td><td><span class="badge b-owner">OWNER</span> <span class="badge b-manager">MANAGER</span></td><td>商品情報更新</td></tr>
+  <tr><td><span class="badge b-del">DELETE</span></td><td><code>/products/{id}</code></td><td><span class="badge b-owner">OWNER</span></td><td>ソフト削除 (is_active=false)</td></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/products/{id}/mappings</code></td><td><span class="badge b-all">全ロール</span></td><td>競合マッピング一覧</td></tr>
+  <tr><td><span class="badge b-post">POST</span></td><td><code>/products/{id}/mappings</code></td><td><span class="badge b-owner">OWNER</span> <span class="badge b-manager">MANAGER</span></td><td>競合商品マッピング追加</td></tr>
+  <tr><td><span class="badge b-del">DELETE</span></td><td><code>/products/{id}/mappings/{map_id}</code></td><td><span class="badge b-owner">OWNER</span> <span class="badge b-manager">MANAGER</span></td><td>マッピング削除</td></tr>
+  <tr><td><span class="badge b-post">POST</span></td><td><code>/competitors</code></td><td><span class="badge b-owner">OWNER</span> <span class="badge b-manager">MANAGER</span></td><td>競合商品カタログ登録</td></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/competitors/{id}</code></td><td><span class="badge b-all">全ロール</span></td><td>競合商品詳細 + 最新価格</td></tr>
+</table>
+
+<h3>POST /products — Request</h3>
+<pre>{
+  <span class="key">"sku"</span>:                <span class="str">"SKU-001"</span>,
+  <span class="key">"name"</span>:               <span class="str">"高品質ボールペン 10本セット"</span>,
+  <span class="key">"rakuten_item_code"</span>:  <span class="str">"my-shop-001:pen-set-10"</span>,  <span class="cmt">// optional</span>
+  <span class="key">"cost"</span>:               <span class="num">3000.00</span>,     <span class="cmt">// 仕入原価 ¥3,000 [OWNER/MANAGER only]</span>
+  <span class="key">"min_margin_amount"</span>:  <span class="num">500.00</span>,      <span class="cmt">// 最低保証マージン ¥500</span>
+  <span class="key">"min_margin_rate"</span>:    <span class="kw">null</span>         <span class="cmt">// 率指定の場合: 0.15 (15%)</span>
+}</pre>
+
+<h4>Response 201 — OWNER / MANAGER (MyProductDetailResponse)</h4>
+<pre>{
+  <span class="key">"id"</span>:                 <span class="str">"prod-uuid-..."</span>,
+  <span class="key">"tenant_id"</span>:          <span class="str">"tenant-uuid-..."</span>,
+  <span class="key">"sku"</span>:                <span class="str">"SKU-001"</span>,
+  <span class="key">"name"</span>:               <span class="str">"高品質ボールペン 10本セット"</span>,
+  <span class="key">"cost"</span>:               <span class="num">3000.00</span>,      <span class="cmt">// 機密 — VIEWER には返さない</span>
+  <span class="key">"min_margin_amount"</span>:  <span class="num">500.00</span>,       <span class="cmt">// 機密</span>
+  <span class="key">"min_margin_rate"</span>:    <span class="kw">null</span>,         <span class="cmt">// 機密</span>
+  <span class="key">"defensive_price"</span>:    <span class="num">3500.00</span>,      <span class="cmt">// 機密: cost + min_margin_amount</span>
+  <span class="key">"current_price"</span>:      <span class="kw">null</span>,
+  <span class="key">"is_active"</span>:          <span class="kw">true</span>,
+  <span class="key">"created_at"</span>:         <span class="str">"2025-01-15T10:00:00Z"</span>,
+  <span class="key">"updated_at"</span>:         <span class="str">"2025-01-15T10:00:00Z"</span>
+}</pre>
+
+<div class="callout crit"><strong>機密フィールド隠蔽:</strong> VIEWER ロールには <code>cost</code> / <code>min_margin_amount</code> / <code>min_margin_rate</code> / <code>defensive_price</code> を含まない <code>MyProductResponse</code> を返す。サービス層がロールを確認してスキーマを切り替える。</div>
+
+<h3>POST /products/{id}/mappings — Request</h3>
+<pre>{
+  <span class="key">"competitor_product_id"</span>: <span class="str">"comp-uuid-..."</span>,
+  <span class="key">"is_primary"</span>: <span class="kw">true</span>,   <span class="cmt">// PRIMARY_ONLY スコープで使用するメイン競合</span>
+  <span class="key">"label"</span>:      <span class="str">"最安値ライバル店"</span>
+}</pre>
+
+<hr />
+
+
+<h2>3. Pricing Rules <code>/api/v1/rules/...</code></h2>
+
+<table>
+  <tr><th>メソッド</th><th>パス</th><th>RBAC</th><th>説明</th></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/rules</code></td><td><span class="badge b-all">全ロール</span></td><td>ルール一覧 (priority 昇順)</td></tr>
+  <tr><td><span class="badge b-post">POST</span></td><td><code>/rules</code></td><td><span class="badge b-owner">OWNER</span> <span class="badge b-manager">MANAGER</span></td><td>ルール新規作成 (Audit Log 同一トランザクション)</td></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/rules/{id}</code></td><td><span class="badge b-all">全ロール</span></td><td>ルール詳細</td></tr>
+  <tr><td><span class="badge b-put">PUT</span></td><td><code>/rules/{id}</code></td><td><span class="badge b-owner">OWNER</span> <span class="badge b-manager">MANAGER</span></td><td>ルール全置換 (Audit Log: before/after diff)</td></tr>
+  <tr><td><span class="badge b-patch">PATCH</span></td><td><code>/rules/{id}</code></td><td><span class="badge b-owner">OWNER</span> <span class="badge b-manager">MANAGER</span></td><td>ルール部分更新</td></tr>
+  <tr><td><span class="badge b-del">DELETE</span></td><td><code>/rules/{id}</code></td><td><span class="badge b-owner">OWNER</span></td><td>ソフト削除 (is_active=false)</td></tr>
+  <tr><td><span class="badge b-post">POST</span></td><td><code>/rules/simulate</code></td><td><span class="badge b-all">全ロール</span></td><td><strong>ステートレス</strong>シミュレーション (DBへの書き込みなし)</td></tr>
+  <tr><td><span class="badge b-post">POST</span></td><td><code>/rules/{id}/simulate</code></td><td><span class="badge b-all">全ロール</span></td><td>保存済みルールで価格シミュレーション</td></tr>
+</table>
+
+<h3>POST /rules — Request</h3>
+<pre>{
+  <span class="key">"name"</span>:          <span class="str">"最安値より10円安く"</span>,
+  <span class="key">"description"</span>:   <span class="str">"競合最安値を1円単位で下回る。防衛価格以下には下げない"</span>,
+  <span class="key">"my_product_id"</span>: <span class="str">"prod-uuid-..."</span>,  <span class="cmt">// null = 全商品適用</span>
+  <span class="key">"priority"</span>:      <span class="num">10</span>,
+  <span class="key">"condition"</span>: {
+    <span class="key">"type"</span>: <span class="str">"BEAT_LOWEST"</span>,
+    <span class="key">"adjustment"</span>: { <span class="key">"mode"</span>: <span class="str">"FIXED"</span>, <span class="key">"value"</span>: <span class="num">-10</span> },
+    <span class="key">"constraints"</span>: {
+      <span class="key">"min_margin_amount"</span>: <span class="num">500</span>,
+      <span class="key">"min_margin_rate"</span>:   <span class="kw">null</span>,
+      <span class="key">"price_ceiling"</span>:     <span class="kw">null</span>
+    },
+    <span class="key">"scope"</span>: { <span class="key">"competitor_filter"</span>: <span class="str">"ALL_MAPPED"</span> }
+  }
+}</pre>
+
+<h3>POST /rules/simulate — ステートレスシミュレーション (F-6)</h3>
+<div class="callout green"><span class="badge b-pure">Pure Function</span> このエンドポイントは <code>evaluate_rule()</code> を呼び出すのみ。DB への読み書きは一切行わない。</div>
+<h4>Request</h4>
+<pre>{
+  <span class="key">"condition"</span>: {
+    <span class="key">"type"</span>: <span class="str">"BEAT_LOWEST"</span>,
+    <span class="key">"adjustment"</span>: { <span class="key">"mode"</span>: <span class="str">"FIXED"</span>, <span class="key">"value"</span>: <span class="num">-10</span> },
+    <span class="key">"constraints"</span>: { <span class="key">"min_margin_amount"</span>: <span class="num">500</span>, <span class="key">"min_margin_rate"</span>: <span class="kw">null</span>, <span class="key">"price_ceiling"</span>: <span class="kw">null</span> },
+    <span class="key">"scope"</span>: { <span class="key">"competitor_filter"</span>: <span class="str">"ALL_MAPPED"</span> }
+  },
+  <span class="key">"competitor_prices"</span>: [<span class="num">4500</span>, <span class="num">4800</span>, <span class="num">5000</span>],  <span class="cmt">// 仮想競合価格</span>
+  <span class="key">"cost"</span>:              <span class="num">3000.00</span>,
+  <span class="key">"min_margin_amount"</span>: <span class="num">500.00</span>
+}</pre>
+<h4>Response 200</h4>
+<pre>{
+  <span class="key">"recommended_price"</span>:     <span class="num">4490</span>,   <span class="cmt">// 4500 - 10 = 4490 ≥ floor(3500) → OK</span>
+  <span class="key">"raw_price"</span>:             <span class="num">4490</span>,
+  <span class="key">"defensive_floor"</span>:       <span class="num">3500</span>,   <span class="cmt">// cost(3000) + min_margin(500)</span>
+  <span class="key">"floor_applied"</span>:         <span class="kw">false</span>,
+  <span class="key">"ceiling_applied"</span>:       <span class="kw">false</span>,
+  <span class="key">"reference_price"</span>:       <span class="num">4500</span>,   <span class="cmt">// min([4500,4800,5000])</span>
+  <span class="key">"competitor_prices_used"</span>: [<span class="num">4500</span>, <span class="num">4800</span>, <span class="num">5000</span>],
+  <span class="key">"rule_type"</span>:             <span class="str">"BEAT_LOWEST"</span>,
+  <span class="key">"explanation"</span>: <span class="str">"rule_type=BEAT_LOWEST | reference_price=4500 | raw_price=4490 | defensive_floor=3500 | floor_applied=false | ceiling_applied=false | recommended_price=4490"</span>
+}</pre>
+
+<h4>フロア適用ケース (competitor_prices=[3200, 3400])</h4>
+<pre>{
+  <span class="key">"recommended_price"</span>:  <span class="num">3500</span>,   <span class="cmt">// raw(3190) &lt; floor(3500) → フロア適用</span>
+  <span class="key">"raw_price"</span>:          <span class="num">3190</span>,   <span class="cmt">// 3200 - 10 = 3190</span>
+  <span class="key">"defensive_floor"</span>:    <span class="num">3500</span>,
+  <span class="key">"floor_applied"</span>:      <span class="kw">true</span>,   <span class="cmt">// 防衛価格フロアが発動</span>
+  <span class="key">"ceiling_applied"</span>:    <span class="kw">false</span>,
+  <span class="key">"reference_price"</span>:    <span class="num">3200</span>,
+  <span class="key">"explanation"</span>: <span class="str">"... | floor_applied=true | recommended_price=3500"</span>
+}</pre>
+
+<h3>POST /rules/{id}/simulate — 保存済みルールのシミュレーション</h3>
+<pre><span class="cmt">// Request — 保存済みルールの condition を使用。競合価格のみ渡す。</span>
+{
+  <span class="key">"competitor_prices"</span>: [<span class="num">4200</span>, <span class="num">4300</span>],
+  <span class="key">"condition"</span>:          <span class="kw">null</span>,    <span class="cmt">// null = 保存済みルールの condition を使用</span>
+  <span class="key">"cost"</span>:               <span class="kw">null</span>,    <span class="cmt">// null = 商品の cost を DB から取得</span>
+  <span class="key">"min_margin_amount"</span>:  <span class="kw">null</span>
+}</pre>
+
+<hr />
+
+
+<h2>4. 価格履歴・推奨価格タイムライン <code>/api/v1/histories/...</code></h2>
+
+<table>
+  <tr><th>メソッド</th><th>パス</th><th>RBAC</th><th>説明</th></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/histories/products/{product_id}</code></td><td><span class="badge b-all">全ロール</span></td><td>自社商品の推奨価格タイムライン</td></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/histories/competitors/{competitor_id}</code></td><td><span class="badge b-all">全ロール</span></td><td>競合商品の価格変動時系列</td></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/histories/recommendations</code></td><td><span class="badge b-all">全ロール</span></td><td>テナント全商品の推奨価格タイムライン</td></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/audit-logs</code></td><td><span class="badge b-all">全ロール</span></td><td>監査ログ一覧 (Append-Only / Read-Only)</td></tr>
+  <tr><td><span class="badge b-get">GET</span></td><td><code>/audit-logs/{id}</code></td><td><span class="badge b-all">全ロール</span></td><td>監査ログ単件取得</td></tr>
+</table>
+
+<h4>クエリパラメータ (共通)</h4>
+<table>
+  <tr><th>パラメータ</th><th>型</th><th>説明</th></tr>
+  <tr><td><code>cursor</code></td><td>ISO8601</td><td>カーソルページネーション (captured_at / occurred_at の最後の値)</td></tr>
+  <tr><td><code>limit</code></td><td>int (1-200)</td><td>1ページの最大件数 (default: 50)</td></tr>
+  <tr><td><code>from_date</code></td><td>ISO8601</td><td>期間フィルタ (開始)</td></tr>
+  <tr><td><code>to_date</code></td><td>ISO8601</td><td>期間フィルタ (終了)</td></tr>
+  <tr><td><code>source</code></td><td>CRAWL | MANUAL | RULE</td><td>histories のみ: 取得ソースフィルタ</td></tr>
+</table>
+
+<h3>GET /histories/products/{product_id} — Response</h3>
+<pre>{
+  <span class="key">"items"</span>: [
+    {
+      <span class="key">"id"</span>:                <span class="str">"hist-uuid-..."</span>,
+      <span class="key">"product_ref_id"</span>:    <span class="str">"prod-uuid-..."</span>,
+      <span class="key">"product_type"</span>:      <span class="str">"MY"</span>,
+      <span class="key">"price"</span>:             <span class="num">4490</span>,
+      <span class="key">"recommended_price"</span>: <span class="num">4490</span>,
+      <span class="key">"source"</span>:            <span class="str">"RULE"</span>,
+      <span class="key">"rule_id"</span>:           <span class="str">"rule-uuid-..."</span>,
+      <span class="key">"is_all_time_low"</span>:   <span class="kw">false</span>,
+      <span class="key">"captured_at"</span>:       <span class="str">"2025-01-15T11:00:00Z"</span>
+    }
+  ],
+  <span class="key">"total"</span>:       <span class="num">142</span>,
+  <span class="key">"next_cursor"</span>: <span class="str">"2025-01-15T10:30:00Z"</span>,
+  <span class="key">"has_more"</span>:    <span class="kw">true</span>
+}</pre>
+
+<h3>GET /audit-logs — Response</h3>
+<pre>{
+  <span class="key">"items"</span>: [
+    {
+      <span class="key">"id"</span>:             <span class="str">"audit-uuid-..."</span>,
+      <span class="key">"actor_email"</span>:    <span class="str">"admin@example.com"</span>,
+      <span class="key">"entity_type"</span>:    <span class="str">"PRICING_RULE"</span>,
+      <span class="key">"action"</span>:         <span class="str">"RULE_UPDATED"</span>,
+      <span class="key">"details"</span>: {
+        <span class="key">"action"</span>: <span class="str">"RULE_UPDATED"</span>,
+        <span class="key">"rule_id"</span>: <span class="str">"rule-uuid-..."</span>,
+        <span class="key">"before"</span>: { <span class="key">"type"</span>: <span class="str">"BEAT_LOWEST"</span>, <span class="key">"adjustment"</span>: { <span class="key">"value"</span>: <span class="num">-10</span> } },
+        <span class="key">"after"</span>:  { <span class="key">"type"</span>: <span class="str">"BEAT_LOWEST"</span>, <span class="key">"adjustment"</span>: { <span class="key">"value"</span>: <span class="num">-5</span>  } }
+      },
+      <span class="key">"occurred_at"</span>: <span class="str">"2025-01-15T09:30:00Z"</span>
+    },
+    {
+      <span class="key">"id"</span>:          <span class="str">"audit-uuid-2..."</span>,
+      <span class="key">"actor_email"</span>: <span class="kw">null</span>,              <span class="cmt">// null = システムイベント (クローラ)</span>
+      <span class="key">"entity_type"</span>: <span class="str">"PRICE_RECOMMENDATION"</span>,
+      <span class="key">"action"</span>:      <span class="str">"RULE_FIRED"</span>,
+      <span class="key">"details"</span>: {
+        <span class="key">"rule_id"</span>:           <span class="str">"rule-uuid-..."</span>,
+        <span class="key">"rule_name"</span>:         <span class="str">"最安値より10円安く"</span>,
+        <span class="key">"competitor_price"</span>:  <span class="num">4500</span>,
+        <span class="key">"raw_price"</span>:         <span class="num">4490</span>,
+        <span class="key">"recommended_price"</span>: <span class="num">4490</span>,
+        <span class="key">"defensive_floor"</span>:   <span class="num">3500</span>,
+        <span class="key">"floor_applied"</span>:     <span class="kw">false</span>
+      },
+      <span class="key">"occurred_at"</span>: <span class="str">"2025-01-15T11:00:00Z"</span>
+    }
+  ],
+  <span class="key">"total"</span>: <span class="num">87</span>, <span class="key">"next_cursor"</span>: <span class="str">"2025-01-15T08:00:00Z"</span>, <span class="key">"has_more"</span>: <span class="kw">true</span>
+}</pre>
+
+<hr />
+
+
+<h2>5. evaluate_rule() — Pure Function 設計</h2>
+
+<div class="callout green">
+  <span class="badge b-pure">Pure Function</span>
+  <code>evaluate_rule(rule_condition, competitor_prices, cost, min_margin_amount, min_margin_rate)</code><br />
+  DBアクセスなし・副作用なし・I/Oなし。シミュレーションエンドポイントとWorkerタスクの両方から呼び出す。
+</div>
+
+<h3>評価ステップ (AGENTS.md 準拠)</h3>
+<table>
+  <tr><th>ステップ</th><th>処理内容</th><th>実装箇所</th></tr>
+  <tr><td>Step 1</td><td><code>competitor_filter</code> に従い基準価格を決定<br />ALL_MAPPED → min(prices) / PRIMARY_ONLY → prices[0]</td><td><code>_select_reference_price()</code></td></tr>
+  <tr><td>Step 2</td><td>ルール戦略から raw_price を計算</td><td><code>_compute_raw_price()</code></td></tr>
+  <tr><td>Step 3</td><td>防衛価格フロアを計算 (ルール個別 → 商品レベルの優先順)</td><td><code>_compute_effective_floor()</code></td></tr>
+  <tr><td>Step 4</td><td><code>max(raw_price, defensive_floor)</code> でフロア適用</td><td><code>evaluate_rule()</code></td></tr>
+  <tr><td>Step 5</td><td><code>price_ceiling</code> が設定されていれば上限キャップ</td><td><code>evaluate_rule()</code></td></tr>
+</table>
+
+<h3>具体的な計算例</h3>
+
+<h4>例1: BEAT_LOWEST — 通常ケース</h4>
+<pre><span class="cmt">competitor_prices = [4500, 4800, 5000], cost = 3000, min_margin = 500</span>
+Step1: reference = min([4500,4800,5000]) = 4500
+Step2: raw_price = 4500 + (-10) = 4490   <span class="cmt">(FIXED adjustment, value=-10)</span>
+Step3: floor = 3000 + 500 = 3500
+Step4: 4490 &gt;= 3500 → <span class="kw">floor_applied=false</span>
+Step5: price_ceiling=null → skip
+→ recommended_price = <span class="num">4490</span></pre>
+
+<h4>例2: BEAT_LOWEST — 防衛価格フロア発動</h4>
+<pre><span class="cmt">competitor_prices = [3200, 3400], cost = 3000, min_margin = 500</span>
+Step1: reference = 3200
+Step2: raw_price = 3200 + (-10) = 3190
+Step3: floor = 3000 + 500 = 3500
+Step4: 3190 &lt; 3500 → <span class="kw">floor_applied=true</span>, price = 3500
+→ recommended_price = <span class="num">3500</span>  <span class="cmt">← 防衛価格で固定</span></pre>
+
+<h4>例3: BEAT_LOWEST (PERCENTAGE, -2%) + 上限キャップ</h4>
+<pre><span class="cmt">competitor_prices = [10000], cost = 5000, min_margin = 500, price_ceiling = 9800</span>
+Step1: reference = 10000
+Step2: raw_price = 10000 × (1 - 0.02) = 9800
+Step3: floor = 5000 + 500 = 5500
+Step4: 9800 &gt;= 5500 → floor_applied=false
+Step5: 9800 &lt;= 9800 → <span class="kw">ceiling_applied=false</span>  <span class="cmt">(ちょうど天井)</span>
+→ recommended_price = <span class="num">9800</span></pre>
+
+<h4>例4: PERCENTAGE_MARKUP — 原価マークアップ20%</h4>
+<pre><span class="cmt">competitor_prices = [],  cost = 3000, min_margin_rate = 0.15</span>
+Step1: reference = None  <span class="cmt">(不要)</span>
+Step2: raw_price = 3000 × (1 + 0.20) = 3600
+Step3: floor = 3000 × (1 + 0.15) = 3450   <span class="cmt">(min_margin_rate使用)</span>
+Step4: 3600 &gt;= 3450 → floor_applied=false
+→ recommended_price = <span class="num">3600</span></pre>
+
+<h4>例5: FIXED_PRICE — 固定価格4,980円 (フロアより高い)</h4>
+<pre><span class="cmt">competitor_prices = [any], cost = 3000, min_margin = 500</span>
+Step2: raw_price = 4980   <span class="cmt">(adjustment.value = 4980)</span>
+Step3: floor = 3500
+Step4: 4980 &gt;= 3500 → floor_applied=false
+→ recommended_price = <span class="num">4980</span></pre>
+
+<h3>Margin Override 優先順位</h3>
+<table>
+  <tr><th>優先度</th><th>ソース</th><th>使用条件</th></tr>
+  <tr><td>1 (最高)</td><td>rule.condition.constraints.min_margin_amount</td><td>ルール個別オーバーライド (¥額指定)</td></tr>
+  <tr><td>2</td><td>rule.condition.constraints.min_margin_rate</td><td>ルール個別オーバーライド (率指定)</td></tr>
+  <tr><td>3</td><td>my_product.min_margin_rate</td><td>商品レベル率指定 (ルールに overrideなし)</td></tr>
+  <tr><td>4 (最低)</td><td>my_product.min_margin_amount</td><td>商品レベル額指定 (フォールバック)</td></tr>
+</table>
+
+<h3>サポートされる condition.type 一覧</h3>
+<table>
+  <tr><th>type</th><th>必要フィールド</th><th>説明</th></tr>
+  <tr><td><code>BEAT_LOWEST</code></td><td>adjustment.mode + value</td><td>競合最安値より固定額/率で調整</td></tr>
+  <tr><td><code>MATCH_LOWEST</code></td><td>なし</td><td>競合最安値に完全一致</td></tr>
+  <tr><td><code>FIXED_PRICE</code></td><td>adjustment.value (価格)</td><td>競合価格に関わらず固定価格</td></tr>
+  <tr><td><code>PERCENTAGE_MARKUP</code></td><td>adjustment.value (率 e.g. 0.20)</td><td>cost × (1 + rate) 原価マークアップ</td></tr>
+</table>
+
+<hr />
+
+<h2>エラーレスポンス形式</h2>
+<table>
+  <tr><th>HTTP Status</th><th>code</th><th>発生条件</th></tr>
+  <tr><td>400</td><td><code>VALIDATION_ERROR</code></td><td>Pydantic バリデーション失敗</td></tr>
+  <tr><td>401</td><td><code>UNAUTHORIZED</code></td><td>JWT なし / 期限切れ / 署名エラー</td></tr>
+  <tr><td>403</td><td><code>FORBIDDEN</code></td><td>ロール権限不足</td></tr>
+  <tr><td>404</td><td><code>NOT_FOUND</code></td><td>リソースが存在しない / 他テナント所有</td></tr>
+  <tr><td>409</td><td><code>CONFLICT</code></td><td>sku 重複 / shop_code 重複</td></tr>
+  <tr><td>422</td><td><code>RULE_INVALID</code></td><td>condition JSONB スキーマ違反</td></tr>
+  <tr><td>500</td><td><code>INTERNAL_ERROR</code></td><td>予期しないサーバーエラー</td></tr>
+</table>
+
+<footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>

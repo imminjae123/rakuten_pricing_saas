@@ -1,0 +1,462 @@
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rakuten Pricing SaaS — DB詳細設計書</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 13.5px; line-height: 1.6; color: #1f2328;
+    background: #fff; padding: 32px 16px 56px;
+  }
+  .page { max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .meta { color: #57606a; font-size: 12px; margin-bottom: 32px; }
+  h2 {
+    font-size: 15px; font-weight: 700;
+    border-left: 4px solid #3b82d4; padding-left: 10px;
+    margin: 36px 0 12px;
+  }
+  h3 { font-size: 13.5px; font-weight: 700; margin: 22px 0 6px; color: #1f2328; }
+  h4 { font-size: 12.5px; font-weight: 700; margin: 14px 0 4px; color: #57606a; }
+  p  { margin-bottom: 9px; }
+  code {
+    font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px;
+    background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 3px;
+    padding: 1px 5px;
+  }
+  pre {
+    background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 6px;
+    padding: 12px 15px; overflow-x: auto;
+    font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px;
+    line-height: 1.65; margin-bottom: 14px; white-space: pre;
+  }
+  .cmt { color: #57606a; font-style: italic; }
+  .kw  { color: #7c5cd8; font-weight: 600; }
+  .ty  { color: #3b82d4; }
+  .str { color: #166534; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 12.5px; }
+  th { background: #f7f8fa; border: 1px solid #e5e7eb; padding: 7px 10px; text-align: left; font-weight: 600; }
+  td { border: 1px solid #e5e7eb; padding: 6px 10px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .pk  { background: #fef3c7; font-weight: 700; }
+  .fk  { background: #dbeafe; }
+  .rls { background: #dcfce7; font-weight: 700; }
+  .sec { background: #fee2e2; }
+  .badge {
+    display: inline-block; font-size: 10.5px; padding: 1px 6px;
+    border-radius: 10px; font-weight: 600; margin: 1px 2px;
+  }
+  .b-pk     { background: #fef3c7; color: #92400e; }
+  .b-fk     { background: #dbeafe; color: #1d4ed8; }
+  .b-rls    { background: #dcfce7; color: #166534; }
+  .b-sec    { background: #fee2e2; color: #991b1b; }
+  .b-idx    { background: #ede9fe; color: #5b21b6; }
+  .b-gin    { background: #fce7f3; color: #9d174d; }
+  .b-ao     { background: #ffedd5; color: #9a3412; }
+  .callout {
+    border: 1px solid #e5e7eb; border-left: 4px solid #3b82d4;
+    background: #f7f8fa; border-radius: 4px;
+    padding: 10px 14px; margin-bottom: 12px; font-size: 12.5px;
+  }
+  .callout.warn { border-left-color: #f59e0b; }
+  .callout.crit { border-left-color: #ef4444; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 30px 0; }
+  .toc a { color: #3b82d4; text-decoration: none; }
+  .toc li { margin-bottom: 3px; }
+  /* ER diagram SVG */
+  svg text { font-family: "SFMono-Regular", Consolas, monospace; }
+  .flow { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-bottom: 10px; }
+  .fb { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 3px; padding: 3px 8px; font-size: 11.5px; font-family: "SFMono-Regular", Consolas, monospace; }
+  .fa { color: #57606a; font-size: 13px; }
+  footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 12px; color: #57606a; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1>Rakuten Pricing SaaS — DB 詳細設計書</h1>
+<p class="meta">PostgreSQL + SQLAlchemy v2.0 Async (asyncpg) · Multi-Tenant RLS · Append-Only Audit</p>
+
+<h4>凡例</h4>
+<span class="badge b-pk">PK</span>
+<span class="badge b-fk">FK</span>
+<span class="badge b-rls">RLS</span>
+<span class="badge b-sec">機密</span>
+<span class="badge b-idx">INDEX</span>
+<span class="badge b-gin">GIN INDEX</span>
+<span class="badge b-ao">APPEND-ONLY</span>
+
+
+<ol class="toc" style="margin:18px 0 6px;padding-left:18px;font-size:12.5px">
+  <li><a href="#tenants">tenants</a></li>
+  <li><a href="#users">users</a></li>
+  <li><a href="#my_products">my_products</a></li>
+  <li><a href="#competitor_products">competitor_products</a></li>
+  <li><a href="#product_mappings">product_mappings</a></li>
+  <li><a href="#pricing_rules">pricing_rules</a></li>
+  <li><a href="#price_histories">price_histories</a></li>
+  <li><a href="#audit_logs">audit_logs</a></li>
+  <li><a href="#rls">RLS 設計方針</a></li>
+  <li><a href="#er">ER 図 (Mermaid)</a></li>
+  <li><a href="#models">SQLAlchemy モデル ファイル構成</a></li>
+</ol>
+
+<hr />
+
+
+<h2 id="tenants">1. tenants</h2>
+<p>B2B顧客（楽天セラー）を1行で表すマスタテーブル。他の全テナントスコープテーブルの RLS アンカー。</p>
+<table>
+  <tr><th>カラム名</th><th>型</th><th>制約</th><th>説明</th></tr>
+  <tr class="pk-row"><td><code>id</code> <span class="badge b-pk">PK</span></td><td>UUID</td><td>PRIMARY KEY, DEFAULT gen_random_uuid()</td><td>テナント識別子</td></tr>
+  <tr><td><code>shop_name</code></td><td>VARCHAR(255)</td><td>NOT NULL</td><td>楽天ショップ名</td></tr>
+  <tr><td><code>shop_code</code> <span class="badge b-idx">UNIQUE</span></td><td>VARCHAR(100)</td><td>NOT NULL, UNIQUE</td><td>楽天ショップコード (グローバルユニーク)</td></tr>
+  <tr><td><code>rakuten_shop_url</code></td><td>VARCHAR(500)</td><td>NULL可</td><td>ショップURL</td></tr>
+  <tr><td><code>is_active</code></td><td>BOOLEAN</td><td>NOT NULL, DEFAULT true</td><td>停止フラグ (物理削除なし)</td></tr>
+  <tr><td><code>contact_email</code></td><td>VARCHAR(255)</td><td>NULL可</td><td>契約担当者メール</td></tr>
+  <tr><td><code>line_user_id</code></td><td>VARCHAR(100)</td><td>NULL可</td><td>OWNER向け LINE UserID</td></tr>
+  <tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td>NOT NULL, DEFAULT now()</td><td></td></tr>
+  <tr><td><code>updated_at</code></td><td>TIMESTAMPTZ</td><td>NOT NULL, DEFAULT now()</td><td></td></tr>
+</table>
+
+<h2 id="users">2. users</h2>
+<p>テナント所属スタッフ。OWNER / MANAGER / VIEWER の3ロール。RLS適用済み。</p>
+<table>
+  <tr><th>カラム名</th><th>型</th><th>制約</th><th>説明</th></tr>
+  <tr><td><code>id</code> <span class="badge b-pk">PK</span></td><td>UUID</td><td>PK, DEFAULT gen_random_uuid()</td><td></td></tr>
+  <tr><td><code>tenant_id</code> <span class="badge b-fk">FK</span> <span class="badge b-rls">RLS</span></td><td>UUID</td><td>NOT NULL, FK→tenants.id CASCADE</td><td>RLS アンカーカラム</td></tr>
+  <tr><td><code>email</code> <span class="badge b-idx">UNIQUE/tenant</span></td><td>VARCHAR(255)</td><td>NOT NULL</td><td>同テナント内でユニーク</td></tr>
+  <tr><td><code>hashed_password</code></td><td>VARCHAR(255)</td><td>NOT NULL</td><td>bcrypt ハッシュ — API応答に含めてはならない</td></tr>
+  <tr><td><code>full_name</code></td><td>VARCHAR(255)</td><td>NULL可</td><td></td></tr>
+  <tr><td><code>role</code></td><td>VARCHAR(20)</td><td>NOT NULL, DEFAULT 'VIEWER'</td><td>OWNER | MANAGER | VIEWER</td></tr>
+  <tr><td><code>is_active</code></td><td>BOOLEAN</td><td>NOT NULL, DEFAULT true</td><td></td></tr>
+  <tr><td><code>line_user_id</code></td><td>VARCHAR(100)</td><td>NULL可</td><td>個人向け LINE UserID</td></tr>
+  <tr><td><code>created_at</code></td><td>TIMESTAMPTZ</td><td>NOT NULL</td><td></td></tr>
+  <tr><td><code>updated_at</code></td><td>TIMESTAMPTZ</td><td>NOT NULL</td><td></td></tr>
+</table>
+<h4>インデックス</h4>
+<table>
+  <tr><th>名前</th><th>カラム</th><th>種別</th><th>目的</th></tr>
+  <tr><td><code>uq_users_tenant_email</code></td><td>(tenant_id, email)</td><td>UNIQUE</td><td>テナント内メール重複防止</td></tr>
+  <tr><td><code>ix_users_tenant_id</code></td><td>(tenant_id)</td><td>BTREE</td><td>スタッフ一覧取得</td></tr>
+</table>
+
+<h2 id="my_products">3. my_products</h2>
+<div class="callout crit"><strong>最高機密テーブル</strong>: <code>cost</code>, <code>min_margin_amount</code>, <code>min_margin_rate</code>, <code>defensive_price</code> は VIEWER ロールの API レスポンスから除外する。RLS により DB 層でもクロステナント読み取り不可。</div>
+<table>
+  <tr><th>カラム名</th><th>型</th><th>制約</th><th>説明</th></tr>
+  <tr><td><code>id</code> <span class="badge b-pk">PK</span></td><td>UUID</td><td>PK</td><td></td></tr>
+  <tr><td><code>tenant_id</code> <span class="badge b-fk">FK</span> <span class="badge b-rls">RLS</span></td><td>UUID</td><td>NOT NULL, FK→tenants CASCADE</td><td>RLS アンカー</td></tr>
+  <tr><td><code>sku</code> <span class="badge b-idx">UNIQUE/tenant</span></td><td>VARCHAR(100)</td><td>NOT NULL</td><td>テナント内ユニーク商品コード</td></tr>
+  <tr><td><code>name</code></td><td>VARCHAR(500)</td><td>NOT NULL</td><td>商品名</td></tr>
+  <tr><td><code>description</code></td><td>TEXT</td><td>NULL可</td><td></td></tr>
+  <tr><td><code>rakuten_item_code</code></td><td>VARCHAR(255)</td><td>NULL可</td><td>自社楽天商品コード</td></tr>
+  <tr><td><code>cost</code> <span class="badge b-sec">機密</span></td><td>NUMERIC(12,2)</td><td>NOT NULL</td><td>仕入原価 (¥)</td></tr>
+  <tr><td><code>min_margin_amount</code> <span class="badge b-sec">機密</span></td><td>NUMERIC(12,2)</td><td>NOT NULL, DEFAULT 0</td><td>最低保証マージン額 (¥)</td></tr>
+  <tr><td><code>min_margin_rate</code> <span class="badge b-sec">機密</span></td><td>NUMERIC(6,4)</td><td>NULL可</td><td>最低保証マージン率 (0.0〜1.0)</td></tr>
+  <tr><td><code>defensive_price</code> <span class="badge b-sec">機密</span></td><td>NUMERIC(12,2)</td><td>NOT NULL, DEFAULT 0</td><td>= cost + min_margin_amount (サービス層が更新)</td></tr>
+  <tr><td><code>current_price</code></td><td>NUMERIC(12,2)</td><td>NULL可</td><td>直近のルールエンジン推奨価格</td></tr>
+  <tr><td><code>is_active</code></td><td>BOOLEAN</td><td>NOT NULL, DEFAULT true</td><td></td></tr>
+  <tr><td><code>created_at / updated_at</code></td><td>TIMESTAMPTZ</td><td>NOT NULL</td><td></td></tr>
+</table>
+<h4>インデックス</h4>
+<table>
+  <tr><th>名前</th><th>カラム</th><th>種別</th><th>目的</th></tr>
+  <tr><td><code>uq_my_products_tenant_sku</code></td><td>(tenant_id, sku)</td><td>UNIQUE</td><td>SKU重複防止</td></tr>
+  <tr><td><code>ix_my_products_tenant_id</code></td><td>(tenant_id)</td><td>BTREE</td><td>商品一覧フィルタ</td></tr>
+</table>
+
+<h2 id="competitor_products">4. competitor_products</h2>
+<p>楽天市場上の競合商品カタログ。行自体はグローバル共有 (テナントスコープなし)。価格履歴のみテナントスコープ。</p>
+<table>
+  <tr><th>カラム名</th><th>型</th><th>制約</th><th>説明</th></tr>
+  <tr><td><code>id</code> <span class="badge b-pk">PK</span></td><td>UUID</td><td>PK</td><td></td></tr>
+  <tr><td><code>rakuten_item_code</code> <span class="badge b-idx">UNIQUE</span></td><td>VARCHAR(255)</td><td>NOT NULL, UNIQUE</td><td>楽天 IchibaItem/Search のポーリングキー</td></tr>
+  <tr><td><code>shop_code</code></td><td>VARCHAR(100)</td><td>NULL可</td><td></td></tr>
+  <tr><td><code>shop_name</code></td><td>VARCHAR(255)</td><td>NULL可</td><td></td></tr>
+  <tr><td><code>item_name</code></td><td>VARCHAR(1000)</td><td>NULL可</td><td></td></tr>
+  <tr><td><code>item_url</code></td><td>VARCHAR(1000)</td><td>NULL可</td><td></td></tr>
+  <tr><td><code>latest_price</code></td><td>INTEGER</td><td>NULL可</td><td>直近クロール価格 (高速参照用ミラー)</td></tr>
+  <tr><td><code>all_time_low_price</code></td><td>INTEGER</td><td>NULL可</td><td>過去最安値 (LINE通知トリガー)</td></tr>
+  <tr><td><code>is_active</code></td><td>BOOLEAN</td><td>NOT NULL, DEFAULT true</td><td></td></tr>
+  <tr><td><code>created_at / updated_at</code></td><td>TIMESTAMPTZ</td><td>NOT NULL</td><td></td></tr>
+</table>
+
+<h2 id="product_mappings">5. product_mappings</h2>
+<p>MyProduct ↔ CompetitorProduct のブリッジ。このテーブル自体はテナントスコープ (RLS 適用)。</p>
+<table>
+  <tr><th>カラム名</th><th>型</th><th>制約</th><th>説明</th></tr>
+  <tr><td><code>id</code> <span class="badge b-pk">PK</span></td><td>UUID</td><td>PK</td><td></td></tr>
+  <tr><td><code>tenant_id</code> <span class="badge b-fk">FK</span> <span class="badge b-rls">RLS</span></td><td>UUID</td><td>NOT NULL, FK→tenants CASCADE</td><td>RLS アンカー</td></tr>
+  <tr><td><code>my_product_id</code> <span class="badge b-fk">FK</span></td><td>UUID</td><td>NOT NULL, FK→my_products CASCADE</td><td></td></tr>
+  <tr><td><code>competitor_product_id</code> <span class="badge b-fk">FK</span></td><td>UUID</td><td>NOT NULL, FK→competitor_products CASCADE</td><td></td></tr>
+  <tr><td><code>is_primary</code></td><td>BOOLEAN</td><td>NOT NULL, DEFAULT false</td><td>単一参照ルール用のメイン競合フラグ</td></tr>
+  <tr><td><code>label</code></td><td>VARCHAR(100)</td><td>NULL可</td><td>マッピングラベル</td></tr>
+  <tr><td><code>created_at / updated_at</code></td><td>TIMESTAMPTZ</td><td>NOT NULL</td><td></td></tr>
+</table>
+<h4>インデックス</h4>
+<table>
+  <tr><th>名前</th><th>カラム</th><th>種別</th><th>目的</th></tr>
+  <tr><td><code>uq_product_mappings_tenant_pair</code></td><td>(tenant_id, my_product_id, competitor_product_id)</td><td>UNIQUE</td><td>重複マッピング防止</td></tr>
+  <tr><td><code>ix_product_mappings_my_product_id</code></td><td>(my_product_id)</td><td>BTREE</td><td>ルールエンジン用競合一覧取得</td></tr>
+</table>
+
+<h2 id="pricing_rules">6. pricing_rules</h2>
+<div class="callout"><strong>JSONB condition</strong>はフラット化禁止 (AGENTS.md)。ルール評価順: ① 推奨価格算出 → ② マージンチェック → ③ 防衛価格フロア適用</div>
+<table>
+  <tr><th>カラム名</th><th>型</th><th>制約</th><th>説明</th></tr>
+  <tr><td><code>id</code> <span class="badge b-pk">PK</span></td><td>UUID</td><td>PK</td><td></td></tr>
+  <tr><td><code>tenant_id</code> <span class="badge b-fk">FK</span> <span class="badge b-rls">RLS</span></td><td>UUID</td><td>NOT NULL, FK→tenants CASCADE</td><td>RLS アンカー</td></tr>
+  <tr><td><code>my_product_id</code> <span class="badge b-fk">FK</span></td><td>UUID</td><td>NULL可, FK→my_products SET NULL</td><td>NULL=全商品共通ルール</td></tr>
+  <tr><td><code>name</code></td><td>VARCHAR(255)</td><td>NOT NULL</td><td>テナント内ユニーク</td></tr>
+  <tr><td><code>description</code></td><td>TEXT</td><td>NULL可</td><td></td></tr>
+  <tr><td><code>condition</code> <span class="badge b-gin">GIN</span></td><td>JSONB</td><td>NOT NULL</td><td>ルール戦略 + 調整値 + 制約 (下記参照)</td></tr>
+  <tr><td><code>priority</code></td><td>INTEGER</td><td>NOT NULL, DEFAULT 100</td><td>評価順 (小=高優先)</td></tr>
+  <tr><td><code>is_active</code></td><td>BOOLEAN</td><td>NOT NULL, DEFAULT true</td><td></td></tr>
+  <tr><td><code>created_at / updated_at</code></td><td>TIMESTAMPTZ</td><td>NOT NULL</td><td></td></tr>
+</table>
+<h4>condition JSONB スキーマ</h4>
+<pre>{
+  <span class="str">"type"</span>: <span class="str">"BEAT_LOWEST"</span>,           <span class="cmt">// BEAT_LOWEST | MATCH_LOWEST | FIXED_PRICE | PERCENTAGE_MARKUP</span>
+  <span class="str">"adjustment"</span>: {
+    <span class="str">"mode"</span>: <span class="str">"FIXED"</span>,               <span class="cmt">// FIXED | PERCENTAGE</span>
+    <span class="str">"value"</span>: -10                  <span class="cmt">// 負数=値下げ, 正数=上乗せ</span>
+  },
+  <span class="str">"constraints"</span>: {
+    <span class="str">"min_margin_amount"</span>: 500,     <span class="cmt">// ルール個別オーバーライド (optional)</span>
+    <span class="str">"min_margin_rate"</span>: null,
+    <span class="str">"price_ceiling"</span>: null        <span class="cmt">// 上限価格 (optional)</span>
+  },
+  <span class="str">"scope"</span>: {
+    <span class="str">"competitor_filter"</span>: <span class="str">"ALL_MAPPED"</span> <span class="cmt">// ALL_MAPPED | PRIMARY_ONLY</span>
+  }
+}</pre>
+<h4>インデックス</h4>
+<table>
+  <tr><th>名前</th><th>カラム</th><th>種別</th><th>目的</th></tr>
+  <tr><td><code>uq_pricing_rules_tenant_name</code></td><td>(tenant_id, name)</td><td>UNIQUE</td><td>ルール名重複防止</td></tr>
+  <tr><td><code>ix_pricing_rules_condition_gin</code></td><td>(condition)</td><td>GIN</td><td>@&gt; / ? 演算子でルール検索</td></tr>
+  <tr><td><code>ix_pricing_rules_my_product_id</code></td><td>(my_product_id)</td><td>BTREE</td><td>商品別ルール取得</td></tr>
+</table>
+
+<h2 id="price_histories">7. price_histories <span class="badge b-ao">APPEND-ONLY</span></h2>
+<div class="callout warn"><strong>UPDATE / DELETE 禁止</strong>: DB トリガー <code>trg_price_histories_append_only</code> により BEFORE UPDATE/DELETE で EXCEPTION を発生させる。</div>
+<table>
+  <tr><th>カラム名</th><th>型</th><th>制約</th><th>説明</th></tr>
+  <tr><td><code>id</code> <span class="badge b-pk">PK</span></td><td>UUID</td><td>PK</td><td></td></tr>
+  <tr><td><code>tenant_id</code> <span class="badge b-fk">FK</span> <span class="badge b-rls">RLS</span></td><td>UUID</td><td>NOT NULL, FK→tenants CASCADE</td><td>RLS アンカー</td></tr>
+  <tr><td><code>product_ref_id</code></td><td>UUID</td><td>NOT NULL</td><td>my_products.id または competitor_products.id</td></tr>
+  <tr><td><code>product_type</code></td><td>VARCHAR(20)</td><td>NOT NULL</td><td>MY | COMPETITOR</td></tr>
+  <tr><td><code>price</code></td><td>INTEGER</td><td>NOT NULL</td><td>クロール価格 (¥)</td></tr>
+  <tr><td><code>recommended_price</code></td><td>INTEGER</td><td>NULL可</td><td>ルールエンジン出力 (RULE ソース時のみ)</td></tr>
+  <tr><td><code>source</code></td><td>VARCHAR(20)</td><td>NOT NULL, DEFAULT 'CRAWL'</td><td>CRAWL | MANUAL | RULE</td></tr>
+  <tr><td><code>rule_id</code> <span class="badge b-fk">FK</span></td><td>UUID</td><td>NULL可, FK→pricing_rules SET NULL</td><td>発動したルールへの参照</td></tr>
+  <tr><td><code>is_all_time_low</code></td><td>BOOLEAN</td><td>NOT NULL, DEFAULT false</td><td>過去最安値更新フラグ</td></tr>
+  <tr><td><code>captured_at</code></td><td>TIMESTAMPTZ</td><td>NOT NULL, DEFAULT now()</td><td>サーバーサイドタイムスタンプ</td></tr>
+</table>
+<h4>インデックス</h4>
+<table>
+  <tr><th>名前</th><th>カラム</th><th>種別</th><th>目的</th></tr>
+  <tr><td><code>ix_price_histories_product_time</code></td><td>(product_ref_id, captured_at)</td><td>BTREE</td><td>商品別時系列クエリ (主要アクセスパターン)</td></tr>
+  <tr><td><code>ix_price_histories_tenant_time</code></td><td>(tenant_id, captured_at)</td><td>BTREE</td><td>ダッシュボード全商品フィード</td></tr>
+  <tr><td><code>ix_price_histories_rule_id</code></td><td>(rule_id)</td><td>BTREE</td><td>ルール発動履歴検索</td></tr>
+</table>
+
+<h2 id="audit_logs">8. audit_logs <span class="badge b-ao">APPEND-ONLY</span></h2>
+<div class="callout warn"><strong>UPDATE / DELETE 禁止</strong>: DB トリガー + <code>REVOKE UPDATE, DELETE ON audit_logs FROM app_user</code> の二重防護。<code>actor_user_id = NULL</code> はシステム起動イベント (クローラ等)。</div>
+<table>
+  <tr><th>カラム名</th><th>型</th><th>制約</th><th>説明</th></tr>
+  <tr><td><code>id</code> <span class="badge b-pk">PK</span></td><td>UUID</td><td>PK</td><td></td></tr>
+  <tr><td><code>tenant_id</code> <span class="badge b-fk">FK</span> <span class="badge b-rls">RLS</span></td><td>UUID</td><td>NOT NULL, FK→tenants CASCADE</td><td>RLS アンカー</td></tr>
+  <tr><td><code>actor_user_id</code> <span class="badge b-fk">FK</span></td><td>UUID</td><td>NULL可, FK→users SET NULL</td><td>操作ユーザー (Nullはシステムイベント)</td></tr>
+  <tr><td><code>entity_type</code></td><td>VARCHAR(50)</td><td>NOT NULL</td><td>PRICING_RULE | MY_PRODUCT | PRICE_RECOMMENDATION 等</td></tr>
+  <tr><td><code>entity_id</code></td><td>UUID</td><td>NULL可</td><td>対象エンティティのPK</td></tr>
+  <tr><td><code>action</code></td><td>VARCHAR(50)</td><td>NOT NULL</td><td>RULE_CREATED | RULE_UPDATED | RULE_FIRED | ALL_TIME_LOW 等</td></tr>
+  <tr><td><code>details</code> <span class="badge b-gin">GIN</span></td><td>JSONB</td><td>NOT NULL, DEFAULT '{}'</td><td>before/after, 推奨価格算出根拠 等</td></tr>
+  <tr><td><code>occurred_at</code></td><td>TIMESTAMPTZ</td><td>NOT NULL, DEFAULT now()</td><td>サーバーサイドタイムスタンプ</td></tr>
+</table>
+<h4>インデックス</h4>
+<table>
+  <tr><th>名前</th><th>カラム</th><th>種別</th><th>目的</th></tr>
+  <tr><td><code>ix_audit_logs_tenant_occurred</code></td><td>(tenant_id, occurred_at)</td><td>BTREE</td><td>テナント別タイムライン</td></tr>
+  <tr><td><code>ix_audit_logs_entity</code></td><td>(entity_type, entity_id)</td><td>BTREE</td><td>エンティティ別イベント検索</td></tr>
+  <tr><td><code>ix_audit_logs_details_gin</code></td><td>(details)</td><td>GIN</td><td>JSONB @&gt; 検索</td></tr>
+</table>
+
+<hr />
+
+
+<h2 id="rls">RLS 設計方針 + Append-Only 保護</h2>
+
+<h3>DB ロール分離</h3>
+<table>
+  <tr><th>ロール</th><th>権限</th><th>用途</th></tr>
+  <tr><td><code>migration_user</code></td><td>BYPASSRLS + スキーマオーナー</td><td>Alembic マイグレーション専用</td></tr>
+  <tr><td><code>app_user</code></td><td>SELECT/INSERT/UPDATE/DELETE (RLS対象)</td><td>FastAPI アプリ接続ユーザー</td></tr>
+</table>
+
+<h3>RLS ポリシー (全テナントスコープテーブル共通)</h3>
+<pre><span class="cmt">-- Alembic migration 0002 で適用</span>
+<span class="kw">ALTER TABLE</span> {table} <span class="kw">ENABLE ROW LEVEL SECURITY</span>;
+<span class="kw">ALTER TABLE</span> {table} <span class="kw">FORCE ROW LEVEL SECURITY</span>;
+
+<span class="kw">CREATE POLICY</span> tenant_isolation <span class="kw">ON</span> {table}
+    <span class="kw">AS</span> PERMISSIVE <span class="kw">FOR ALL TO</span> app_user
+    <span class="kw">USING</span> (
+        tenant_id = current_setting(<span class="str">'app.current_tenant_id'</span>, true)::uuid
+    )
+    <span class="kw">WITH CHECK</span> (
+        tenant_id = current_setting(<span class="str">'app.current_tenant_id'</span>, true)::uuid
+    );</pre>
+<div class="callout warn">
+  <strong>SET LOCAL vs SET SESSION</strong>: アプリ層は必ず <code>SET LOCAL app.current_tenant_id = '&lt;uuid&gt;'</code> を使用。<br />
+  <code>SET SESSION</code> はトランザクション終了後も設定が残留し、コネクションプール再利用時にクロステナントリークが発生する。
+</div>
+
+<h3>Append-Only トリガー</h3>
+<pre><span class="kw">CREATE OR REPLACE FUNCTION</span> enforce_append_only()
+<span class="kw">RETURNS TRIGGER LANGUAGE</span> plpgsql <span class="kw">AS</span> $$
+<span class="kw">BEGIN</span>
+    <span class="kw">IF</span> TG_OP = <span class="str">'UPDATE'</span> <span class="kw">THEN</span>
+        <span class="kw">RAISE EXCEPTION</span> <span class="str">'UPDATE is not allowed on append-only table "%"'</span>, TG_TABLE_NAME
+            <span class="kw">USING ERRCODE</span> = <span class="str">'restrict_violation'</span>;
+    <span class="kw">END IF</span>;
+    <span class="kw">IF</span> TG_OP = <span class="str">'DELETE'</span> <span class="kw">THEN</span>
+        <span class="kw">RAISE EXCEPTION</span> <span class="str">'DELETE is not allowed on append-only table "%"'</span>, TG_TABLE_NAME
+            <span class="kw">USING ERRCODE</span> = <span class="str">'restrict_violation'</span>;
+    <span class="kw">END IF</span>;
+    <span class="kw">RETURN NULL</span>;
+<span class="kw">END</span>;
+$$;
+
+<span class="cmt">-- price_histories と audit_logs に適用</span>
+<span class="kw">CREATE TRIGGER</span> trg_price_histories_append_only
+    <span class="kw">BEFORE UPDATE OR DELETE ON</span> price_histories
+    <span class="kw">FOR EACH ROW EXECUTE FUNCTION</span> enforce_append_only();
+
+<span class="cmt">-- audit_logs は追加でアプリユーザーの権限もREVOKE (二重防護)</span>
+<span class="kw">REVOKE UPDATE</span>, <span class="kw">DELETE ON</span> audit_logs <span class="kw">FROM</span> app_user;
+<span class="kw">REVOKE UPDATE</span>, <span class="kw">DELETE ON</span> price_histories <span class="kw">FROM</span> app_user;</pre>
+
+<hr />
+
+
+<h2 id="er">ER 図 (Mermaid)</h2>
+<pre>erDiagram
+    TENANTS {
+        uuid id PK
+        string shop_code UK
+        string shop_name
+        bool is_active
+    }
+
+    USERS {
+        uuid id PK
+        uuid tenant_id FK
+        string email
+        string role
+        string hashed_password
+    }
+
+    MY_PRODUCTS {
+        uuid id PK
+        uuid tenant_id FK
+        string sku
+        numeric cost
+        numeric min_margin_amount
+        numeric defensive_price
+    }
+
+    COMPETITOR_PRODUCTS {
+        uuid id PK
+        string rakuten_item_code UK
+        int latest_price
+        int all_time_low_price
+    }
+
+    PRODUCT_MAPPINGS {
+        uuid id PK
+        uuid tenant_id FK
+        uuid my_product_id FK
+        uuid competitor_product_id FK
+        bool is_primary
+    }
+
+    PRICING_RULES {
+        uuid id PK
+        uuid tenant_id FK
+        uuid my_product_id FK
+        string name
+        jsonb condition
+        int priority
+    }
+
+    PRICE_HISTORIES {
+        uuid id PK
+        uuid tenant_id FK
+        uuid product_ref_id
+        string product_type
+        int price
+        int recommended_price
+        string source
+        uuid rule_id FK
+        bool is_all_time_low
+        timestamptz captured_at
+    }
+
+    AUDIT_LOGS {
+        uuid id PK
+        uuid tenant_id FK
+        uuid actor_user_id FK
+        string entity_type
+        string action
+        jsonb details
+        timestamptz occurred_at
+    }
+
+    TENANTS ||--o{ USERS : "has"
+    TENANTS ||--o{ MY_PRODUCTS : "owns"
+    TENANTS ||--o{ PRICING_RULES : "defines"
+    TENANTS ||--o{ PRODUCT_MAPPINGS : "scopes"
+    TENANTS ||--o{ PRICE_HISTORIES : "scopes"
+    TENANTS ||--o{ AUDIT_LOGS : "scopes"
+    USERS ||--o{ AUDIT_LOGS : "actor"
+    MY_PRODUCTS ||--o{ PRODUCT_MAPPINGS : "mapped_in"
+    MY_PRODUCTS ||--o{ PRICING_RULES : "applied_to"
+    COMPETITOR_PRODUCTS ||--o{ PRODUCT_MAPPINGS : "referenced_by"
+    PRICING_RULES ||--o{ PRICE_HISTORIES : "produces"</pre>
+
+<hr />
+
+
+<h2 id="models">SQLAlchemy モデル ファイル構成</h2>
+<table>
+  <tr><th>ファイル</th><th>クラス</th><th>主な特徴</th></tr>
+  <tr><td><code>app/models/base.py</code></td><td><code>Base</code>, <code>TimestampMixin</code></td><td>DeclarativeBase / created_at・updated_at 共通 Mixin</td></tr>
+  <tr><td><code>app/models/tenant.py</code></td><td><code>Tenant</code></td><td>shop_code UNIQUE / relationships (lazy="raise")</td></tr>
+  <tr><td><code>app/models/user.py</code></td><td><code>User</code>, <code>UserRole</code></td><td>uq(tenant_id, email) / StrEnum ロール</td></tr>
+  <tr><td><code>app/models/product.py</code></td><td><code>MyProduct</code>, <code>CompetitorProduct</code></td><td>機密カラム分離 / polymorphic PriceHistory viewonly rel</td></tr>
+  <tr><td><code>app/models/mapping.py</code></td><td><code>ProductMapping</code></td><td>3カラム複合 UNIQUE / is_primary フラグ</td></tr>
+  <tr><td><code>app/models/rule.py</code></td><td><code>PricingRule</code></td><td>JSONB condition + GIN INDEX / priority 評価順</td></tr>
+  <tr><td><code>app/models/price_history.py</code></td><td><code>PriceHistory</code></td><td>TimestampMixin なし / captured_at のみ / Append-Only</td></tr>
+  <tr><td><code>app/models/audit_log.py</code></td><td><code>AuditLog</code></td><td>JSONB details + GIN / occurred_at のみ / 二重防護</td></tr>
+  <tr><td><code>app/models/__init__.py</code></td><td>—</td><td>全モデル集約 import (Alembic env.py 用)</td></tr>
+</table>
+
+<h3>設計上の重要ポイント</h3>
+<table>
+  <tr><th>ポイント</th><th>実装箇所</th></tr>
+  <tr><td>全リレーションは <code>lazy="raise"</code></td><td>N+1クエリを防ぐ。明示的な <code>selectinload()</code> / <code>joinedload()</code> を強制</td></tr>
+  <tr><td><code>UUID</code> は <code>server_default=gen_random_uuid()</code></td><td>INSERT前のDB往復ゼロ。asyncpg との相性最良</td></tr>
+  <tr><td><code>PriceHistory</code> / <code>AuditLog</code> に <code>updated_at</code> なし</td><td>スキーマレベルで不変性を示す</td></tr>
+  <tr><td><code>Numeric(12,2)</code> for cost/price</td><td>浮動小数点誤差排除 (金額計算の必須要件)</td></tr>
+  <tr><td><code>CompetitorProduct</code> は RLS 非対象</td><td>グローバルカタログ。ただし <code>ProductMapping</code> と <code>PriceHistory</code> で間接的にテナント分離</td></tr>
+</table>
+
+<footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,594 @@
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rakuten Pricing SaaS — 初期設計提案</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #1f2328;
+    background: #ffffff;
+    padding: 32px 16px 48px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #57606a; font-size: 13px; margin-bottom: 32px; }
+  h2 {
+    font-size: 16px; font-weight: 700;
+    border-left: 4px solid #3b82d4;
+    padding-left: 10px;
+    margin: 36px 0 14px;
+  }
+  h3 { font-size: 14px; font-weight: 700; margin: 20px 0 8px; color: #3b82d4; }
+  p { margin-bottom: 10px; color: #1f2328; }
+  code {
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12.5px;
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  pre {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  pre .comment { color: #57606a; font-style: italic; }
+  pre .key { color: #7c5cd8; }
+  pre .val { color: #3b82d4; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 18px;
+    font-size: 13px;
+  }
+  th {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+  }
+  td {
+    border: 1px solid #e5e7eb;
+    padding: 7px 12px;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .badge-blue  { background: #dbeafe; color: #1d4ed8; }
+  .badge-purple{ background: #ede9fe; color: #5b21b6; }
+  .badge-red   { background: #fee2e2; color: #991b1b; }
+  .badge-green { background: #dcfce7; color: #166534; }
+  .callout {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #3b82d4;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    font-size: 13px;
+  }
+  .callout.warn { border-left-color: #f59e0b; }
+  .callout.critical { border-left-color: #ef4444; }
+  .section-divider {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 32px 0;
+  }
+  ul, ol { padding-left: 20px; margin-bottom: 10px; }
+  li { margin-bottom: 4px; }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .flow-box {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 12px;
+  }
+  .flow-arrow { color: #57606a; font-size: 13px; }
+  footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 12px;
+    color: #57606a;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>Rakuten Pricing SaaS — 初期設計提案</h1>
+  <p class="subtitle">FastAPI + asyncpg + PostgreSQL RLS + Redis · Clean / Layered Architecture</p>
+
+  
+  <h2>1. 推奨ディレクトリ構成</h2>
+
+  <div class="callout">
+    <strong>採用アーキテクチャ:</strong> <strong>Layered Architecture（≒ Clean Architecture 簡略版）</strong><br />
+    <code>api</code>（Router/Schema） → <code>services</code>（Use-Case/Business Logic） → <code>repositories</code>（DB I/O） → <code>models</code>（ORM/Domain）<br />
+    Worker・Scheduler は <code>workers/</code> に分離し、HTTP層とは独立して動作させる。
+  </div>
+
+<pre>
+rakuten_pricing_saas/
+├── app/
+│   ├── main.py                  <span class="comment"># FastAPI app factory, lifespan, middleware</span>
+│   ├── config.py                <span class="comment"># pydantic-settings BaseSettings → .env 読み込み</span>
+│   ├── dependencies/
+│   │   ├── __init__.py
+│   │   ├── auth.py              <span class="comment"># JWT decode → CurrentUser (tenant_id付き)</span>
+│   │   └── db.py                <span class="comment"># async_session + RLS SET LOCAL</span>
+│   ├── api/
+│   │   ├── v1/
+│   │   │   ├── __init__.py
+│   │   │   ├── router.py        <span class="comment"># include_router で束ねる</span>
+│   │   │   ├── auth.py          <span class="comment"># POST /auth/login, /auth/refresh</span>
+│   │   │   ├── tenants.py       <span class="comment"># POST /tenants</span>
+│   │   │   ├── products.py      <span class="comment"># /products, /products/{id}/mappings</span>
+│   │   │   ├── rules.py         <span class="comment"># /rules, /rules/{id}/simulate (F-6)</span>
+│   │   │   ├── prices.py        <span class="comment"># /prices/histories</span>
+│   │   │   └── audit.py         <span class="comment"># GET /audit-logs (read-only)</span>
+│   │   └── schemas/             <span class="comment"># Pydantic request/response models</span>
+│   │       ├── auth.py
+│   │       ├── product.py
+│   │       ├── rule.py
+│   │       └── audit.py
+│   ├── core/
+│   │   ├── security.py          <span class="comment"># JWT sign/verify, password hash</span>
+│   │   ├── exceptions.py        <span class="comment"># AppException, TenantMismatch など</span>
+│   │   └── pagination.py        <span class="comment"># cursor / offset paging 共通ヘルパ</span>
+│   ├── domain/                  <span class="comment"># Pure Python ― DBに依存しないドメイン計算</span>
+│   │   ├── rule_engine.py       <span class="comment"># JSONB rule → recommended_price 計算</span>
+│   │   └── price_floor.py       <span class="comment"># cost + min_margin_amount 防衛価格</span>
+│   ├── models/                  <span class="comment"># SQLAlchemy Declarative (async)</span>
+│   │   ├── base.py              <span class="comment"># DeclarativeBase, TimestampMixin</span>
+│   │   ├── tenant.py
+│   │   ├── user.py
+│   │   ├── product.py
+│   │   ├── rule.py
+│   │   ├── price_history.py
+│   │   └── audit_log.py
+│   ├── repositories/            <span class="comment"># 全 DB アクセスはここに集約</span>
+│   │   ├── base.py              <span class="comment"># BaseRepository[T] (type-safe CRUD)</span>
+│   │   ├── product_repo.py
+│   │   ├── rule_repo.py
+│   │   ├── price_history_repo.py
+│   │   └── audit_repo.py        <span class="comment"># INSERT ONLY — UPDATE/DELETE 禁止</span>
+│   ├── services/                <span class="comment"># Use-case layer (transaction coordination)</span>
+│   │   ├── product_service.py
+│   │   ├── rule_service.py      <span class="comment"># simulate + save (F-5, F-6)</span>
+│   │   ├── crawl_service.py     <span class="comment"># Rakuten API 呼び出し + throttle</span>
+│   │   └── notification_service.py  <span class="comment"># LINE push → Redis queue</span>
+│   ├── infrastructure/
+│   │   ├── database.py          <span class="comment"># async engine, sessionmaker</span>
+│   │   ├── redis_client.py      <span class="comment"># aioredis pool factory</span>
+│   │   └── rate_limiter.py      <span class="comment"># Token Bucket (Rakuten API throttle)</span>
+│   └── workers/
+│       ├── celery_app.py        <span class="comment"># Celery app instance (Redis broker)</span>
+│       ├── tasks/
+│       │   ├── crawl_task.py    <span class="comment"># periodic crawl (beat schedule)</span>
+│       │   └── notify_task.py   <span class="comment"># LINE push dispatch</span>
+│       └── beat_schedule.py     <span class="comment"># APScheduler または Celery beat 定義</span>
+├── alembic/
+│   ├── env.py                   <span class="comment"># async対応 alembic env (asyncpg)</span>
+│   └── versions/
+├── tests/
+│   ├── conftest.py              <span class="comment"># pytest-asyncio, TestClient, DB fixture</span>
+│   ├── unit/
+│   │   ├── test_rule_engine.py
+│   │   └── test_price_floor.py
+│   ├── integration/
+│   │   ├── test_products_api.py
+│   │   └── test_rules_api.py
+│   └── fixtures/
+├── .env
+├── .env.example
+├── alembic.ini
+├── requirements.txt
+├── requirements-dev.txt
+├── Dockerfile
+├── docker-compose.yml           <span class="comment"># local: postgres + redis + worker</span>
+├── AGENTS.md
+└── rakuten_pricing_saas_requirements.md
+</pre>
+
+  <h3>レイヤー責務の原則</h3>
+  <table>
+    <tr><th>レイヤー</th><th>責務</th><th>DB依存</th></tr>
+    <tr><td><code>api/</code></td><td>HTTP受信・認証・リクエスト/レスポンス変換のみ</td><td>✗</td></tr>
+    <tr><td><code>services/</code></td><td>ユースケース調整・トランザクション境界・ドメイン呼び出し</td><td>間接（repo経由）</td></tr>
+    <tr><td><code>domain/</code></td><td>純粋計算（rule engine, price floor）。テスト容易性最優先</td><td>✗</td></tr>
+    <tr><td><code>repositories/</code></td><td>SQLAlchemy クエリのみ。ビジネスロジック禁止</td><td>✓</td></tr>
+    <tr><td><code>workers/</code></td><td>非同期タスク。HTTP層と完全分離</td><td>間接（repo経由）</td></tr>
+  </table>
+
+  <hr class="section-divider" />
+
+  
+  <h2>2. requirements.txt — ライブラリ選定と理由</h2>
+
+<pre>
+<span class="comment"># ── Web Framework ──────────────────────────────────────────</span>
+fastapi==0.115.0           <span class="comment"># Starlette ベース非同期 Web FW</span>
+uvicorn[standard]==0.30.6  <span class="comment"># ASGI サーバー (httptools + uvloop)</span>
+
+<span class="comment"># ── Database ───────────────────────────────────────────────</span>
+sqlalchemy[asyncio]==2.0.36  <span class="comment"># async engine / session</span>
+asyncpg==0.30.0              <span class="comment"># asyncio-native PostgreSQL ドライバ</span>
+alembic==1.14.0              <span class="comment"># スキーママイグレーション (async env 対応)</span>
+
+<span class="comment"># ── Settings / Validation ──────────────────────────────────</span>
+pydantic==2.10.0             <span class="comment"># スキーマ検証 + JSONB rule パース</span>
+pydantic-settings==2.6.0     <span class="comment"># .env → BaseSettings 自動読み込み</span>
+
+<span class="comment"># ── Auth ───────────────────────────────────────────────────</span>
+python-jose[cryptography]==3.3.0  <span class="comment"># JWT RS256/HS256 sign/verify</span>
+passlib[bcrypt]==1.7.4            <span class="comment"># パスワードハッシュ</span>
+
+<span class="comment"># ── Cache / Queue ──────────────────────────────────────────</span>
+redis[hiredis]==5.2.0     <span class="comment"># redis-py v5: async対応 (aioredis統合済み)</span>
+celery[redis]==5.4.0      <span class="comment"># ワーカー + beat スケジューラ</span>
+
+<span class="comment"># ── HTTP Client (Rakuten API) ───────────────────────────────</span>
+httpx==0.28.0             <span class="comment"># async-native HTTP クライアント (requests 代替)</span>
+
+<span class="comment"># ── LINE SDK ───────────────────────────────────────────────</span>
+line-bot-sdk==3.13.0      <span class="comment"># LINE Messaging API 公式 SDK</span>
+</pre>
+
+<pre>
+<span class="comment"># requirements-dev.txt</span>
+pytest==8.3.0
+pytest-asyncio==0.24.0    <span class="comment"># async テスト対応</span>
+httpx==0.28.0             <span class="comment"># TestClient (FastAPI)</span>
+pytest-cov==6.0.0
+ruff==0.9.0               <span class="comment"># Linter + Formatter (flake8/black 代替)</span>
+mypy==1.14.0
+</pre>
+
+  <h3>主要ライブラリの選定理由</h3>
+  <table>
+    <tr><th>ライブラリ</th><th>選定理由</th><th>代替案との比較</th></tr>
+    <tr>
+      <td><code>asyncpg</code></td>
+      <td>psycopg2 比で 3〜5× 高速。<code>SET LOCAL</code> RLS コマンドを同一接続上で実行可能。SQLAlchemy async engine の公式推奨ドライバ</td>
+      <td>psycopg3 も可だが asyncpg の方が実績豊富</td>
+    </tr>
+    <tr>
+      <td><code>pydantic-settings</code></td>
+      <td><code>.env</code> を型安全に読む。<code>model_validator</code> で DATABASE_URL の prefix 検証が可能</td>
+      <td>python-dotenv は型なし</td>
+    </tr>
+    <tr>
+      <td><code>redis[hiredis]</code></td>
+      <td>v5 で aioredis が統合。<code>asyncio</code> / 同期両方のクライアントが統一 API で使える（Celery は同期コンテキストで使用）</td>
+      <td>aioredis 単体は deprecated</td>
+    </tr>
+    <tr>
+      <td><code>celery</code></td>
+      <td>beat スケジューラ内蔵。LINE push タスクの retry/ETA 制御が容易。Upstash Redis (TLS) に対応</td>
+      <td>RQ はシンプルだが beat 相当機能なし。APScheduler は状態管理が弱い</td>
+    </tr>
+    <tr>
+      <td><code>httpx</code></td>
+      <td>async context manager 対応。<code>AsyncClient</code> + <code>limits</code> でコネクションプール管理。Rakuten API throttle と相性良好</td>
+      <td>aiohttp は API が煩雑</td>
+    </tr>
+    <tr>
+      <td><code>alembic</code></td>
+      <td>async engine を使った <code>run_sync</code> パターンで RLS policy DDL も管理可能</td>
+      <td>必須。代替なし</td>
+    </tr>
+  </table>
+
+  <hr class="section-divider" />
+
+  
+  <h2>3. .env.example — 設定項目と管理方針</h2>
+
+<pre>
+<span class="comment"># ─── Application ───────────────────────────────────────────────</span>
+<span class="key">APP_ENV</span>=<span class="val">development</span>          <span class="comment"># development | staging | production</span>
+<span class="key">APP_NAME</span>=<span class="val">RakutenPricingSaaS</span>
+<span class="key">PORT</span>=<span class="val">8000</span>
+<span class="key">DEBUG</span>=<span class="val">true</span>                   <span class="comment"># production では false 必須</span>
+<span class="key">LOG_LEVEL</span>=<span class="val">INFO</span>
+
+<span class="comment"># ─── Database ──────────────────────────────────────────────────</span>
+<span class="key">DATABASE_URL</span>=<span class="val">postgresql+asyncpg://user:password@localhost:5432/rakuten_pricing_dev</span>
+<span class="key">DB_POOL_SIZE</span>=<span class="val">10</span>
+<span class="key">DB_MAX_OVERFLOW</span>=<span class="val">20</span>
+<span class="key">DB_POOL_RECYCLE</span>=<span class="val">1800</span>         <span class="comment"># Neon/Supabase は長時間接続を切断するため必須</span>
+
+<span class="comment"># ─── Redis ─────────────────────────────────────────────────────</span>
+<span class="key">REDIS_URL</span>=<span class="val">redis://localhost:6379/0</span>
+<span class="key">REDIS_TASK_QUEUE_DB</span>=<span class="val">1</span>         <span class="comment"># Celery ブローカー用 DB 番号を分離</span>
+<span class="key">REDIS_CACHE_TTL_SECONDS</span>=<span class="val">300</span>  <span class="comment"># テナントポリシーキャッシュ TTL</span>
+
+<span class="comment"># ─── Auth / Security ───────────────────────────────────────────</span>
+<span class="key">SECRET_KEY</span>=<span class="val">CHANGE_ME_32_CHARS_MINIMUM</span>
+<span class="key">JWT_ALGORITHM</span>=<span class="val">HS256</span>
+<span class="key">ACCESS_TOKEN_EXPIRE_MINUTES</span>=<span class="val">60</span>
+<span class="key">REFRESH_TOKEN_EXPIRE_DAYS</span>=<span class="val">7</span>
+
+<span class="comment"># ─── Rakuten API ───────────────────────────────────────────────</span>
+<span class="key">RAKUTEN_APPLICATION_ID</span>=<span class="val">your_app_id_here</span>
+<span class="key">RAKUTEN_API_BASE_URL</span>=<span class="val">https://app.rakuten.co.jp/services/api</span>
+<span class="key">RAKUTEN_CALLS_PER_SECOND</span>=<span class="val">1</span>   <span class="comment"># Token Bucket: 最大 1 req/s</span>
+
+<span class="comment"># ─── LINE Messaging API ────────────────────────────────────────</span>
+<span class="key">LINE_CHANNEL_ACCESS_TOKEN</span>=<span class="val">your_line_token_here</span>
+<span class="key">LINE_CHANNEL_SECRET</span>=<span class="val">your_line_channel_secret</span>
+
+<span class="comment"># ─── Celery / Worker ───────────────────────────────────────────</span>
+<span class="key">CELERY_BROKER_URL</span>=<span class="val">redis://localhost:6379/1</span>
+<span class="key">CELERY_RESULT_BACKEND</span>=<span class="val">redis://localhost:6379/1</span>
+<span class="key">CRAWL_INTERVAL_HOURS</span>=<span class="val">1</span>       <span class="comment"># beat スケジューラの周期</span>
+</pre>
+
+  <h3>環境変数管理方針</h3>
+  <table>
+    <tr><th>方針</th><th>詳細</th></tr>
+    <tr>
+      <td><span class="badge badge-blue">型安全</span>pydantic-settings</td>
+      <td><code>app/config.py</code> に <code>class Settings(BaseSettings)</code> を定義。起動時に全変数を検証し、型エラーは即クラッシュ（Fail-Fast）。<code>model_validator</code> で <code>DATABASE_URL</code> が <code>postgresql+asyncpg://</code> 始まりか検証。</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-red">機密分離</span>Secrets</td>
+      <td><code>SECRET_KEY</code>, <code>LINE_CHANNEL_ACCESS_TOKEN</code>, <code>RAKUTEN_APPLICATION_ID</code> は <code>.env</code> に書かず、本番環境では Render / Railway の環境変数 UI またはシークレットマネージャーから注入。</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-green">環境切り替え</span>APP_ENV</td>
+      <td><code>APP_ENV=development</code> 時のみ <code>DEBUG=true</code> を許可。<code>production</code> 時は <code>DEBUG</code> を強制 <code>false</code>、SQLAlchemy <code>echo=False</code>。</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-purple">シングルトン</span>lru_cache</td>
+      <td><code>@lru_cache()</code> + <code>get_settings()</code> パターンで Settings インスタンスを1つに固定。テスト時は <code>get_settings.cache_clear()</code> で差し替え可能。</td>
+    </tr>
+  </table>
+
+<pre>
+<span class="comment"># app/config.py の骨格</span>
+from functools import lru_cache
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
+    app_env: str = "development"
+    database_url: str
+    redis_url: str
+    secret_key: str
+    rakuten_application_id: str
+    line_channel_access_token: str
+    ...
+
+    @model_validator(mode="after")
+    def validate_db_driver(self) -&gt; "Settings":
+        if not self.database_url.startswith("postgresql+asyncpg://"):
+            raise ValueError("DATABASE_URL must use asyncpg driver")
+        return self
+
+@lru_cache()
+def get_settings() -&gt; Settings:
+    return Settings()
+</pre>
+
+  <hr class="section-divider" />
+
+  
+  <h2>4. JWT → tenant_id 抽出 + RLS 適用設計</h2>
+
+  <h3>4-1. 全体フロー</h3>
+  <div class="flow">
+    <span class="flow-box">HTTP Request<br />Authorization: Bearer</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">Depends(get_current_user)<br />JWT decode → CurrentUser</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">Depends(get_tenant_session)<br />async_session + SET LOCAL</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">Repository<br />RLS自動フィルタ</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-box">DB (PostgreSQL)<br />RLS Policy 適用</span>
+  </div>
+
+  <h3>4-2. CurrentUser スキーマ</h3>
+<pre>
+<span class="comment"># app/dependencies/auth.py</span>
+from dataclasses import dataclass
+from enum import StrEnum
+
+class Role(StrEnum):
+    OWNER   = "OWNER"
+    MANAGER = "MANAGER"
+    VIEWER  = "VIEWER"
+
+@dataclass(frozen=True)
+class CurrentUser:
+    user_id:   str
+    tenant_id: str   <span class="comment"># 全 DB クエリの where 条件 + RLS に使用</span>
+    role:      Role
+</pre>
+
+  <h3>4-3. JWT デコード Dependency</h3>
+<pre>
+<span class="comment"># app/dependencies/auth.py</span>
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import JWTError, jwt
+from app.config import get_settings
+
+bearer_scheme = HTTPBearer()
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    settings = Depends(get_settings),
+) -&gt; CurrentUser:
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+        tenant_id: str | None = payload.get("tenant_id")
+        user_id:   str | None = payload.get("sub")
+        role:      str | None = payload.get("role")
+        if not tenant_id or not user_id:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token claims")
+        return CurrentUser(user_id=user_id, tenant_id=tenant_id, role=Role(role))
+    except JWTError:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Could not validate credentials")
+</pre>
+
+  <h3>4-4. RLS 適用 Session Dependency（最重要）</h3>
+
+  <div class="callout critical">
+    <strong>重要:</strong> <code>SET LOCAL</code> は <strong>トランザクション内</strong> でのみ有効。
+    セッションが終了するとリセットされる。<code>async with session.begin()</code> の中で必ず実行すること。
+    Connection Pool を使う場合、接続が別テナントに再利用される前に RLS 設定がリセットされることを保証する必要がある。
+  </div>
+
+<pre>
+<span class="comment"># app/dependencies/db.py</span>
+from collections.abc import AsyncGenerator
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import Depends
+from app.infrastructure.database import async_session_factory
+from app.dependencies.auth import CurrentUser, get_current_user
+
+async def get_tenant_session(
+    current_user: CurrentUser = Depends(get_current_user),
+) -&gt; AsyncGenerator[AsyncSession, None]:
+    """
+    1. 新しい AsyncSession を取得
+    2. トランザクション開始と同時に SET LOCAL でテナントを設定
+    3. PostgreSQL RLS が app.current_tenant_id を参照してフィルタリング
+    4. finally ブロックで必ずセッションをクローズ（接続プールに返却）
+    """
+    async with async_session_factory() as session:
+        async with session.begin():
+            await session.execute(
+                "SET LOCAL app.current_tenant_id = :tid",
+                {"tid": current_user.tenant_id},
+            )
+            try:
+                yield session
+                <span class="comment"># session.begin() の __aexit__ が commit</span>
+            except Exception:
+                await session.rollback()
+                raise
+</pre>
+
+  <h3>4-5. PostgreSQL RLS Policy 定義（Alembic migration）</h3>
+<pre>
+<span class="comment">-- alembic/versions/xxxx_enable_rls.py (op.execute で適用)</span>
+
+<span class="comment">-- my_products テーブル（最高機密 — コスト・マージン情報）</span>
+ALTER TABLE my_products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE my_products FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON my_products
+    USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+
+<span class="comment">-- 他の全テナントスコープテーブルにも同様に適用</span>
+<span class="comment">-- pricing_rules, price_histories, audit_logs, product_mappings ...</span>
+</pre>
+
+  <h3>4-6. RBAC ガード（Role チェック Dependency）</h3>
+<pre>
+<span class="comment"># app/dependencies/auth.py</span>
+from fastapi import HTTPException, status
+
+def require_role(*allowed_roles: Role):
+    """
+    使い方: Depends(require_role(Role.OWNER, Role.MANAGER))
+    """
+    async def _check(current_user: CurrentUser = Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                f"Required role: {[r.value for r in allowed_roles]}",
+            )
+        return current_user
+    return _check
+
+<span class="comment"># Router での使用例</span>
+@router.post("/rules", dependencies=[Depends(require_role(Role.OWNER, Role.MANAGER))])
+async def create_rule(
+    body: RuleCreateSchema,
+    session: AsyncSession = Depends(get_tenant_session),
+): ...
+</pre>
+
+  <h3>4-7. 非同期安全性チェックリスト</h3>
+  <table>
+    <tr><th>リスク</th><th>対策</th></tr>
+    <tr>
+      <td>Connection Pool でのテナント混在</td>
+      <td><code>SET LOCAL</code>（トランザクションスコープ）を使用。<code>SET SESSION</code> は禁止（接続再利用時にリークする）</td>
+    </tr>
+    <tr>
+      <td>Celery Worker での RLS 欠落</td>
+      <td>Worker タスクは JWT ではなく <code>tenant_id</code> を直接引数で受け取り、Worker 内でも <code>get_tenant_session</code> 相当の初期化を実行</td>
+    </tr>
+    <tr>
+      <td>Alembic マイグレーション時の RLS バイパス</td>
+      <td><code>alembic/env.py</code> では <code>BYPASSRLS</code> 権限を持つ管理ユーザーで接続し、アプリユーザーとは DB ロールを分離</td>
+    </tr>
+    <tr>
+      <td>Audit Log の RLS 適用</td>
+      <td>Audit Log は INSERT のみ。RLS は SELECT にも適用されているため、自テナントのログしか閲覧できない</td>
+    </tr>
+    <tr>
+      <td>cost / margin の JSON シリアライズ漏洩</td>
+      <td><code>schemas/product.py</code> の Response Schema から <code>cost</code>, <code>min_margin</code> フィールドは <code>VIEWER</code> ロール向けに除外</td>
+    </tr>
+  </table>
+
+  <hr class="section-divider" />
+
+  <h2>アーキテクチャ決定サマリー</h2>
+  <table>
+    <tr><th>決定事項</th><th>選択</th><th>主な理由</th></tr>
+    <tr><td>アーキテクチャ</td><td>Layered Architecture</td><td>Clean Architecture の原則を保ちつつ、個人プロジェクト規模に適した簡潔さ</td></tr>
+    <tr><td>テナント分離</td><td>PostgreSQL RLS + SET LOCAL</td><td>DB レベルで漏洩をブロック。アプリ層のバグがあっても第二の防壁になる</td></tr>
+    <tr><td>非同期 DB</td><td>SQLAlchemy 2.0 async + asyncpg</td><td>FastAPI のイベントループと統合。接続プール管理が内蔵</td></tr>
+    <tr><td>Worker</td><td>Celery (Redis ブローカー)</td><td>beat スケジューラ内蔵。Upstash Redis との TLS 接続実績あり</td></tr>
+    <tr><td>HTTP クライアント</td><td>httpx.AsyncClient</td><td>asyncio ネイティブ。Token Bucket throttle との組み合わせが容易</td></tr>
+    <tr><td>設定管理</td><td>pydantic-settings + lru_cache</td><td>型安全 + Fail-Fast + テスト差し替え容易</td></tr>
+  </table>
+
+  <footer>Made with IBM Bob</footer>
+</div>
+</body>
+</html>
