@@ -11,7 +11,7 @@ Design principles (from AGENTS.md)
   by a rule-engine firing (NULL for raw crawl snapshots).
 - rule_id links back to the PricingRule that was applied (nullable).
 - source tracks how the snapshot was created:
-    CRAWL   — periodic Rakuten API batch
+    CRAWL   — periodic Yahoo! Shopping API batch
     MANUAL  — operator override
     RULE    — rule engine output
 
@@ -83,7 +83,7 @@ class PriceHistory(Base):
         comment="MY | COMPETITOR",
     )
 
-    # Raw crawled price from Rakuten API (¥, integer as Rakuten returns it)
+    # Raw crawled price from Yahoo! Shopping API (¥, integer)
     price: Mapped[int] = mapped_column(
         Integer, nullable=False, comment="Crawled market price (¥)"
     )

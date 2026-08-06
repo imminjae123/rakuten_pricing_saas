@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Rakuten Pricing SaaS — API 仕様書</title>
+<title>Yahoo! Shopping Pricing SaaS — API 仕様書</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:13.5px;line-height:1.6;color:#1f2328;background:#fff;padding:32px 16px 56px}
@@ -50,7 +50,7 @@ footer{margin-top:48px;padding-top:14px;border-top:1px solid #e5e7eb;text-align:
 <body>
 <div class="page">
 
-<h1>Rakuten Pricing SaaS — API 仕様書</h1>
+<h1>Yahoo! Shopping Pricing SaaS — API 仕様書</h1>
 <p class="meta">FastAPI · RESTful · RBAC (OWNER / MANAGER / VIEWER) · JWT Bearer · API prefix: <code>/api/v1</code></p>
 
 <div class="callout">
@@ -112,9 +112,9 @@ footer{margin-top:48px;padding-top:14px;border-top:1px solid #e5e7eb;text-align:
 <h3>POST /auth/register</h3>
 <h4>Request</h4>
 <pre>{
-  <span class="key">"shop_name"</span>: <span class="str">"My Rakuten Shop"</span>,
+  <span class="key">"shop_name"</span>: <span class="str">"My Yahoo Shopping Store"</span>,
   <span class="key">"shop_code"</span>: <span class="str">"my-shop-001"</span>,
-  <span class="key">"rakuten_shop_url"</span>: <span class="str">"https://www.rakuten.co.jp/my-shop/"</span>,  <span class="cmt">// optional</span>
+  <span class="key">"shop_url"</span>: <span class="str">"https://store.shopping.yahoo.co.jp/my-shop/"</span>,  <span class="cmt">// optional</span>
   <span class="key">"contact_email"</span>: <span class="str">"admin@example.com"</span>,
   <span class="key">"email"</span>: <span class="str">"admin@example.com"</span>,
   <span class="key">"password"</span>: <span class="str">"Passw0rd!"</span>,
@@ -176,7 +176,7 @@ footer{margin-top:48px;padding-top:14px;border-top:1px solid #e5e7eb;text-align:
 <pre>{
   <span class="key">"sku"</span>:                <span class="str">"SKU-001"</span>,
   <span class="key">"name"</span>:               <span class="str">"高品質ボールペン 10本セット"</span>,
-  <span class="key">"rakuten_item_code"</span>:  <span class="str">"my-shop-001:pen-set-10"</span>,  <span class="cmt">// optional</span>
+  <span class="key">"yahoo_item_code"</span>:  <span class="str">"my-shop-001:pen-set-10"</span>,  <span class="cmt">// optional</span>
   <span class="key">"cost"</span>:               <span class="num">3000.00</span>,     <span class="cmt">// 仕入原価 ¥3,000 [OWNER/MANAGER only]</span>
   <span class="key">"min_margin_amount"</span>:  <span class="num">500.00</span>,      <span class="cmt">// 最低保証マージン ¥500</span>
   <span class="key">"min_margin_rate"</span>:    <span class="kw">null</span>         <span class="cmt">// 率指定の場合: 0.15 (15%)</span>

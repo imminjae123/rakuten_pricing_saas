@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Rakuten Pricing SaaS — DB詳細設計書</title>
+<title>Yahoo! Shopping Pricing SaaS — DB詳細設計書</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -77,7 +77,7 @@
 <body>
 <div class="page">
 
-<h1>Rakuten Pricing SaaS — DB 詳細設計書</h1>
+<h1>Yahoo! Shopping Pricing SaaS — DB 詳細設計書</h1>
 <p class="meta">PostgreSQL + SQLAlchemy v2.0 Async (asyncpg) · Multi-Tenant RLS · Append-Only Audit</p>
 
 <h4>凡例</h4>
@@ -108,13 +108,13 @@
 
 
 <h2 id="tenants">1. tenants</h2>
-<p>B2B顧客（楽天セラー）を1行で表すマスタテーブル。他の全テナントスコープテーブルの RLS アンカー。</p>
+<p>B2B顧客（Yahoo! Shoppingセラー）を1行で表すマスタテーブル。他の全テナントスコープテーブルの RLS アンカー。</p>
 <table>
   <tr><th>カラム名</th><th>型</th><th>制約</th><th>説明</th></tr>
   <tr class="pk-row"><td><code>id</code> <span class="badge b-pk">PK</span></td><td>UUID</td><td>PRIMARY KEY, DEFAULT gen_random_uuid()</td><td>テナント識別子</td></tr>
-  <tr><td><code>shop_name</code></td><td>VARCHAR(255)</td><td>NOT NULL</td><td>楽天ショップ名</td></tr>
-  <tr><td><code>shop_code</code> <span class="badge b-idx">UNIQUE</span></td><td>VARCHAR(100)</td><td>NOT NULL, UNIQUE</td><td>楽天ショップコード (グローバルユニーク)</td></tr>
-  <tr><td><code>rakuten_shop_url</code></td><td>VARCHAR(500)</td><td>NULL可</td><td>ショップURL</td></tr>
+  <tr><td><code>shop_name</code></td><td>VARCHAR(255)</td><td>NOT NULL</td><td>ショップ名</td></tr>
+  <tr><td><code>shop_code</code> <span class="badge b-idx">UNIQUE</span></td><td>VARCHAR(100)</td><td>NOT NULL, UNIQUE</td><td>ショップコード (グローバルユニーク)</td></tr>
+  <tr><td><code>shop_url</code></td><td>VARCHAR(500)</td><td>NULL可</td><td>ショップURL</td></tr>
   <tr><td><code>is_active</code></td><td>BOOLEAN</td><td>NOT NULL, DEFAULT true</td><td>停止フラグ (物理削除なし)</td></tr>
   <tr><td><code>contact_email</code></td><td>VARCHAR(255)</td><td>NULL可</td><td>契約担当者メール</td></tr>
   <tr><td><code>line_user_id</code></td><td>VARCHAR(100)</td><td>NULL可</td><td>OWNER向け LINE UserID</td></tr>
@@ -153,7 +153,7 @@
   <tr><td><code>sku</code> <span class="badge b-idx">UNIQUE/tenant</span></td><td>VARCHAR(100)</td><td>NOT NULL</td><td>テナント内ユニーク商品コード</td></tr>
   <tr><td><code>name</code></td><td>VARCHAR(500)</td><td>NOT NULL</td><td>商品名</td></tr>
   <tr><td><code>description</code></td><td>TEXT</td><td>NULL可</td><td></td></tr>
-  <tr><td><code>rakuten_item_code</code></td><td>VARCHAR(255)</td><td>NULL可</td><td>自社楽天商品コード</td></tr>
+  <tr><td><code>yahoo_item_code</code></td><td>VARCHAR(255)</td><td>NULL可</td><td>自社Yahoo!ショッピング商品コード</td></tr>
   <tr><td><code>cost</code> <span class="badge b-sec">機密</span></td><td>NUMERIC(12,2)</td><td>NOT NULL</td><td>仕入原価 (¥)</td></tr>
   <tr><td><code>min_margin_amount</code> <span class="badge b-sec">機密</span></td><td>NUMERIC(12,2)</td><td>NOT NULL, DEFAULT 0</td><td>最低保証マージン額 (¥)</td></tr>
   <tr><td><code>min_margin_rate</code> <span class="badge b-sec">機密</span></td><td>NUMERIC(6,4)</td><td>NULL可</td><td>最低保証マージン率 (0.0〜1.0)</td></tr>
@@ -170,11 +170,11 @@
 </table>
 
 <h2 id="competitor_products">4. competitor_products</h2>
-<p>楽天市場上の競合商品カタログ。行自体はグローバル共有 (テナントスコープなし)。価格履歴のみテナントスコープ。</p>
+<p>Yahoo! Japan Shopping上の競合商品カタログ。行自体はグローバル共有 (テナントスコープなし)。価格履歴のみテナントスコープ。</p>
 <table>
   <tr><th>カラム名</th><th>型</th><th>制約</th><th>説明</th></tr>
   <tr><td><code>id</code> <span class="badge b-pk">PK</span></td><td>UUID</td><td>PK</td><td></td></tr>
-  <tr><td><code>rakuten_item_code</code> <span class="badge b-idx">UNIQUE</span></td><td>VARCHAR(255)</td><td>NOT NULL, UNIQUE</td><td>楽天 IchibaItem/Search のポーリングキー</td></tr>
+  <tr><td><code>yahoo_item_code</code> <span class="badge b-idx">UNIQUE</span></td><td>VARCHAR(255)</td><td>NOT NULL, UNIQUE</td><td>Yahoo! Shopping itemSearch のポーリングキー</td></tr>
   <tr><td><code>shop_code</code></td><td>VARCHAR(100)</td><td>NULL可</td><td></td></tr>
   <tr><td><code>shop_name</code></td><td>VARCHAR(255)</td><td>NULL可</td><td></td></tr>
   <tr><td><code>item_name</code></td><td>VARCHAR(1000)</td><td>NULL可</td><td></td></tr>
@@ -372,7 +372,7 @@ $$;
 
     COMPETITOR_PRODUCTS {
         uuid id PK
-        string rakuten_item_code UK
+        string yahoo_item_code UK
         int latest_price
         int all_time_low_price
     }

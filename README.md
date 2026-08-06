@@ -1,1 +1,1 @@
-# rakuten_pricing_saas
+# yahoo_pricing_saas

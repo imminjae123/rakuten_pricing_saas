@@ -26,9 +26,9 @@ class TenantRegisterRequest(BaseModel):
     """POST /api/v1/auth/register"""
 
     # Tenant info
-    shop_name: str = Field(..., min_length=1, max_length=255, examples=["My Rakuten Shop"])
+    shop_name: str = Field(..., min_length=1, max_length=255, examples=["My Yahoo Shopping Store"])
     shop_code: str = Field(..., min_length=1, max_length=100, examples=["my-shop-001"])
-    rakuten_shop_url: str | None = Field(None, max_length=500)
+    shop_url: str | None = Field(None, max_length=500)
     contact_email: EmailStr
 
     # First OWNER account

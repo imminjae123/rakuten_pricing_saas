@@ -37,7 +37,7 @@ class MyProductCreateRequest(BaseModel):
     sku: str = Field(..., min_length=1, max_length=100, examples=["SKU-001"])
     name: str = Field(..., min_length=1, max_length=500)
     description: str | None = None
-    rakuten_item_code: str | None = Field(None, max_length=255)
+    yahoo_item_code: str | None = Field(None, max_length=255)
     cost: Decimal = Field(..., ge=0, decimal_places=2, examples=[3000.00])
     min_margin_amount: Decimal = Field(Decimal("0"), ge=0, decimal_places=2, examples=[500.00])
     min_margin_rate: Decimal | None = Field(None, ge=0, le=1, decimal_places=4, examples=[0.15])
@@ -48,7 +48,7 @@ class MyProductUpdateRequest(BaseModel):
 
     name: str | None = Field(None, min_length=1, max_length=500)
     description: str | None = None
-    rakuten_item_code: str | None = None
+    yahoo_item_code: str | None = None
     cost: Decimal | None = Field(None, ge=0, decimal_places=2)
     min_margin_amount: Decimal | None = Field(None, ge=0, decimal_places=2)
     min_margin_rate: Decimal | None = Field(None, ge=0, le=1, decimal_places=4)
@@ -67,7 +67,7 @@ class MyProductResponse(BaseModel):
     sku: str
     name: str
     description: str | None
-    rakuten_item_code: str | None
+    yahoo_item_code: str | None
     current_price: Decimal | None
     is_active: bool
     created_at: datetime
@@ -100,7 +100,7 @@ class MyProductListResponse(BaseModel):
 class CompetitorProductCreateRequest(BaseModel):
     """POST /api/v1/competitors"""
 
-    rakuten_item_code: str = Field(..., min_length=1, max_length=255)
+    yahoo_item_code: str = Field(..., min_length=1, max_length=255)
     shop_code: str | None = Field(None, max_length=100)
     shop_name: str | None = Field(None, max_length=255)
     item_name: str | None = Field(None, max_length=1000)
@@ -109,7 +109,7 @@ class CompetitorProductCreateRequest(BaseModel):
 
 class CompetitorProductResponse(BaseModel):
     id: uuid.UUID
-    rakuten_item_code: str
+    yahoo_item_code: str
     shop_code: str | None
     shop_name: str | None
     item_name: str | None

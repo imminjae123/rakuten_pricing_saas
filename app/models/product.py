@@ -12,7 +12,7 @@ columns in the system.  They MUST:
 CompetitorProduct
 -----------------
 Stores a snapshot of a competitor item's metadata as discovered on
-Rakuten Ichiba.  The `rakuten_item_code` is the stable identifier used
+Yahoo! Japan Shopping.  The `yahoo_item_code` is the stable identifier used
 for API polling.  Price snapshots are written to Price_Histories (append-only).
 """
 
@@ -85,10 +85,10 @@ class MyProduct(Base, TimestampMixin):
     sku: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    rakuten_item_code: Mapped[str | None] = mapped_column(
+    yahoo_item_code: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
-        comment="Seller's own Rakuten item code (not competitor code)",
+        comment="Seller's own Yahoo! Shopping item code (not competitor code)",
     )
 
     # ── Sensitive financial columns ────────────────────────────────────────────
@@ -148,22 +148,22 @@ class MyProduct(Base, TimestampMixin):
 
 class CompetitorProduct(Base, TimestampMixin):
     """
-    A competitor item on Rakuten Ichiba being monitored.
+    A competitor item on Yahoo! Japan Shopping being monitored.
 
-    `rakuten_item_code` is the stable Rakuten identifier used for
-    IchibaItem/Search API calls.  One competitor product can be mapped
+    `yahoo_item_code` is the stable Yahoo! Shopping identifier used for
+    itemSearch API calls.  One competitor product can be mapped
     to multiple MyProducts via ProductMapping (N:M bridge).
 
     Constraints
     -----------
-    - rakuten_item_code is globally unique (same item is the same item
+    - yahoo_item_code is globally unique (same item is the same item
       regardless of which tenant is watching it).  Cross-tenant sharing
       of the row is intentional — only price history rows are tenant-scoped.
     """
 
     __tablename__ = "competitor_products"
     __table_args__ = (
-        Index("ix_competitor_products_item_code", "rakuten_item_code", unique=True),
+        Index("ix_competitor_products_item_code", "yahoo_item_code", unique=True),
         Index("ix_competitor_products_shop_code", "shop_code"),
     )
 
@@ -172,11 +172,11 @@ class CompetitorProduct(Base, TimestampMixin):
         primary_key=True,
         server_default=text("gen_random_uuid()"),
     )
-    rakuten_item_code: Mapped[str] = mapped_column(
+    yahoo_item_code: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
         unique=True,
-        comment="Rakuten Ichiba item code — stable polling key",
+        comment="Yahoo! Shopping item code — stable polling key",
     )
     shop_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     shop_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -208,4 +208,4 @@ class CompetitorProduct(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:
-        return f"<CompetitorProduct id={self.id} item_code={self.rakuten_item_code!r}>"
+        return f"<CompetitorProduct id={self.id} item_code={self.yahoo_item_code!r}>"

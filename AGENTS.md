@@ -3,7 +3,8 @@
 This file provides guidance to agents when working with code in this repository.
 
 ## Project Status
-Pre-implementation — only the spec (`rakuten_pricing_saas_requirements.md`) and `.env.example` exist. No source code yet.
+In development — spec (`yahoo_pricing_saas_requirements.md`) and initial source files exist.
+External API: **Yahoo! Japan Shopping API v3**.
 
 ## Planned Stack
 
@@ -28,7 +29,7 @@ Pre-implementation — only the spec (`rakuten_pricing_saas_requirements.md`) an
 ```
 DATABASE_URL=postgresql+asyncpg://...   # asyncpg driver — must match SQLAlchemy async engine
 REDIS_URL=redis://localhost:6379/0
-RAKUTEN_APPLICATION_ID=
+YAHOO_CLIENT_ID=                        # Yahoo! Japan Shopping API v3 client ID
 LINE_CHANNEL_ACCESS_TOKEN=
 SECRET_KEY=                             # JWT signing key
 APP_ENV=development
@@ -48,8 +49,10 @@ PORT=8000
 - Minimum defensive price = `cost + min_margin_amount` — never recommend below this floor
 - Provide a simulation endpoint (`POST /rules/{id}/simulate`) **before** save — required by spec (F-6)
 
-### Data Pipeline — Rakuten API Rate Limiting
-- Rakuten `IchibaItem/Search` API has a **per-second call limit** — implement Token Bucket or sleep-based throttle inside the crawler
+### Data Pipeline — Yahoo! Shopping API Rate Limiting
+- Yahoo! Shopping API v3 endpoint: `https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch`
+- Authentication: `appid=<YAHOO_CLIENT_ID>` query parameter (no OAuth for item search)
+- Implement Token Bucket or sleep-based throttle inside the crawler to respect API rate limits
 - Crawl results must be written as **time-series snapshots** to `Price_Histories` (append-only, never UPDATE)
 
 ### Audit Log — Append-Only
@@ -72,3 +75,9 @@ PORT=8000
 ## Key DB Models
 `Tenants` → `Users` (RBAC: OWNER / MANAGER / VIEWER) → `My_Products` → `Product_Mappings` (bridge) → `Competitor_Products`
 `Pricing_Rules` (JSONB condition) → `Price_Histories` (time-series) → `Audit_Logs` (append-only)
+
+## External API Reference
+- **Yahoo! Shopping API v3 itemSearch:**
+  `GET https://shopping.yahooapis.jp/ShoppingWebService/V3/itemSearch?appid=<id>&query=<keyword>&results=10&sort=-score`
+- Response key fields per hit: `name`, `price`, `url`, `code`, `seller.name`, `image.medium`
+- Client implementation: `app/services/yahoo.py` — `YahooShoppingClient` (async context manager)

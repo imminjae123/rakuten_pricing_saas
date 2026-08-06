@@ -1,7 +1,7 @@
 """
 Tenant model.
 
-One row per Rakuten seller shop.  All other tenant-scoped tables carry
+One row per seller shop.  All other tenant-scoped tables carry
 a `tenant_id` FK pointing here.  PostgreSQL RLS policies use
     current_setting('app.current_tenant_id')::uuid
 to filter every query automatically.
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 class Tenant(Base, TimestampMixin):
     """
-    Represents one B2B customer (Rakuten seller shop).
+    Represents one B2B customer (Yahoo! Shopping seller shop).
 
     Constraints
     -----------
@@ -42,9 +42,9 @@ class Tenant(Base, TimestampMixin):
         server_default=text("gen_random_uuid()"),
     )
     shop_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    # Rakuten shop identifier — used to scope API calls
+    # Shop identifier — used to scope API calls
     shop_code: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
-    rakuten_shop_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    shop_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # Subscription / active flag — no hard delete
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=text("true"), nullable=False)
     # Contact info

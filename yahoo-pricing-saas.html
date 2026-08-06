@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Rakuten Pricing SaaS — 初期設計提案</title>
+<title>Yahoo! Shopping Pricing SaaS — 初期設計提案</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -126,7 +126,7 @@
 <body>
 <div class="page">
 
-  <h1>Rakuten Pricing SaaS — 初期設計提案</h1>
+  <h1>Yahoo! Shopping Pricing SaaS — 初期設計提案</h1>
   <p class="subtitle">FastAPI + asyncpg + PostgreSQL RLS + Redis · Clean / Layered Architecture</p>
 
   
@@ -139,7 +139,7 @@
   </div>
 
 <pre>
-rakuten_pricing_saas/
+yahoo_pricing_saas/
 ├── app/
 │   ├── main.py                  <span class="comment"># FastAPI app factory, lifespan, middleware</span>
 │   ├── config.py                <span class="comment"># pydantic-settings BaseSettings → .env 読み込み</span>
@@ -186,12 +186,12 @@ rakuten_pricing_saas/
 │   ├── services/                <span class="comment"># Use-case layer (transaction coordination)</span>
 │   │   ├── product_service.py
 │   │   ├── rule_service.py      <span class="comment"># simulate + save (F-5, F-6)</span>
-│   │   ├── crawl_service.py     <span class="comment"># Rakuten API 呼び出し + throttle</span>
+│   │   ├── crawl_service.py     <span class="comment"># Yahoo! Shopping API 呼び出し + throttle</span>
 │   │   └── notification_service.py  <span class="comment"># LINE push → Redis queue</span>
 │   ├── infrastructure/
 │   │   ├── database.py          <span class="comment"># async engine, sessionmaker</span>
 │   │   ├── redis_client.py      <span class="comment"># aioredis pool factory</span>
-│   │   └── rate_limiter.py      <span class="comment"># Token Bucket (Rakuten API throttle)</span>
+│   │   └── rate_limiter.py      <span class="comment"># Token Bucket (Yahoo! Shopping API throttle)</span>
 │   └── workers/
 │       ├── celery_app.py        <span class="comment"># Celery app instance (Redis broker)</span>
 │       ├── tasks/
@@ -218,7 +218,7 @@ rakuten_pricing_saas/
 ├── Dockerfile
 ├── docker-compose.yml           <span class="comment"># local: postgres + redis + worker</span>
 ├── AGENTS.md
-└── rakuten_pricing_saas_requirements.md
+└── yahoo_pricing_saas_requirements.md
 </pre>
 
   <h3>レイヤー責務の原則</h3>
@@ -258,7 +258,7 @@ passlib[bcrypt]==1.7.4            <span class="comment"># パスワードハッ�
 redis[hiredis]==5.2.0     <span class="comment"># redis-py v5: async対応 (aioredis統合済み)</span>
 celery[redis]==5.4.0      <span class="comment"># ワーカー + beat スケジューラ</span>
 
-<span class="comment"># ── HTTP Client (Rakuten API) ───────────────────────────────</span>
+<span class="comment"># ── HTTP Client (Yahoo! Shopping API) ──────────────────────</span>
 httpx==0.28.0             <span class="comment"># async-native HTTP クライアント (requests 代替)</span>
 
 <span class="comment"># ── LINE SDK ───────────────────────────────────────────────</span>
@@ -300,7 +300,7 @@ mypy==1.14.0
     </tr>
     <tr>
       <td><code>httpx</code></td>
-      <td>async context manager 対応。<code>AsyncClient</code> + <code>limits</code> でコネクションプール管理。Rakuten API throttle と相性良好</td>
+      <td>async context manager 対応。<code>AsyncClient</code> + <code>limits</code> でコネクションプール管理。Yahoo! Shopping API throttle と相性良好</td>
       <td>aiohttp は API が煩雑</td>
     </tr>
     <tr>
@@ -318,13 +318,13 @@ mypy==1.14.0
 <pre>
 <span class="comment"># ─── Application ───────────────────────────────────────────────</span>
 <span class="key">APP_ENV</span>=<span class="val">development</span>          <span class="comment"># development | staging | production</span>
-<span class="key">APP_NAME</span>=<span class="val">RakutenPricingSaaS</span>
+<span class="key">APP_NAME</span>=<span class="val">YahooShoppingPricingSaaS</span>
 <span class="key">PORT</span>=<span class="val">8000</span>
 <span class="key">DEBUG</span>=<span class="val">true</span>                   <span class="comment"># production では false 必須</span>
 <span class="key">LOG_LEVEL</span>=<span class="val">INFO</span>
 
 <span class="comment"># ─── Database ──────────────────────────────────────────────────</span>
-<span class="key">DATABASE_URL</span>=<span class="val">postgresql+asyncpg://user:password@localhost:5432/rakuten_pricing_dev</span>
+<span class="key">DATABASE_URL</span>=<span class="val">postgresql+asyncpg://user:password@localhost:5432/yahoo_pricing_dev</span>
 <span class="key">DB_POOL_SIZE</span>=<span class="val">10</span>
 <span class="key">DB_MAX_OVERFLOW</span>=<span class="val">20</span>
 <span class="key">DB_POOL_RECYCLE</span>=<span class="val">1800</span>         <span class="comment"># Neon/Supabase は長時間接続を切断するため必須</span>
@@ -340,10 +340,10 @@ mypy==1.14.0
 <span class="key">ACCESS_TOKEN_EXPIRE_MINUTES</span>=<span class="val">60</span>
 <span class="key">REFRESH_TOKEN_EXPIRE_DAYS</span>=<span class="val">7</span>
 
-<span class="comment"># ─── Rakuten API ───────────────────────────────────────────────</span>
-<span class="key">RAKUTEN_APPLICATION_ID</span>=<span class="val">your_app_id_here</span>
-<span class="key">RAKUTEN_API_BASE_URL</span>=<span class="val">https://app.rakuten.co.jp/services/api</span>
-<span class="key">RAKUTEN_CALLS_PER_SECOND</span>=<span class="val">1</span>   <span class="comment"># Token Bucket: 最大 1 req/s</span>
+<span class="comment"># ─── Yahoo! Shopping API ───────────────────────────────────────</span>
+<span class="key">YAHOO_CLIENT_ID</span>=<span class="val">your_client_id_here</span>
+<span class="key">YAHOO_API_BASE_URL</span>=<span class="val">https://shopping.yahooapis.jp/ShoppingWebService/V3</span>
+<span class="key">YAHOO_CALLS_PER_SECOND</span>=<span class="val">1</span>   <span class="comment"># Token Bucket: 最大 1 req/s</span>
 
 <span class="comment"># ─── LINE Messaging API ────────────────────────────────────────</span>
 <span class="key">LINE_CHANNEL_ACCESS_TOKEN</span>=<span class="val">your_line_token_here</span>
@@ -364,7 +364,7 @@ mypy==1.14.0
     </tr>
     <tr>
       <td><span class="badge badge-red">機密分離</span>Secrets</td>
-      <td><code>SECRET_KEY</code>, <code>LINE_CHANNEL_ACCESS_TOKEN</code>, <code>RAKUTEN_APPLICATION_ID</code> は <code>.env</code> に書かず、本番環境では Render / Railway の環境変数 UI またはシークレットマネージャーから注入。</td>
+      <td><code>SECRET_KEY</code>, <code>LINE_CHANNEL_ACCESS_TOKEN</code>, <code>YAHOO_CLIENT_ID</code> は <code>.env</code> に書かず、本番環境では Render / Railway の環境変数 UI またはシークレットマネージャーから注入。</td>
     </tr>
     <tr>
       <td><span class="badge badge-green">環境切り替え</span>APP_ENV</td>
@@ -389,7 +389,7 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str
     secret_key: str
-    rakuten_application_id: str
+    yahoo_client_id: str
     line_channel_access_token: str
     ...
 

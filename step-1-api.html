@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>STEP 1 — 楽天API 動作確認ガイド</title>
+<title>STEP 1 — Yahoo! Shopping API 動作確認ガイド</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -87,11 +87,11 @@
 <body>
 <div class="page">
 
-<h1>STEP 1 — 楽天API 動作確認ガイド</h1>
-<p class="meta">test_rakuten_api.py を実行して商品価格を取得するまでの完全手順</p>
+<h1>STEP 1 — Yahoo! Shopping API 動作確認ガイド</h1>
+<p class="meta">test_yahoo_api.py を実行して商品価格を取得するまでの完全手順</p>
 
 <div class="callout ok">
-  このSTEP 1が成功すると「楽天APIを安全に呼び出せる基盤」ができます。<br />
+  このSTEP 1が成功すると「Yahoo! Shopping APIを安全に呼び出せる基盤」ができます。<br />
   STEP 2（FastAPI + DB保存）への土台となる最重要ステップです。
 </div>
 
@@ -113,21 +113,21 @@
     </div>
 
     <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">① ターミナルでコピー（PowerShell）</h3>
-    <pre><span class="prompt">PS&gt; </span><span class="blu">cd</span> rakuten_pricing_saas
+    <pre><span class="prompt">PS&gt; </span><span class="blu">cd</span> yahoo_pricing_saas
 <span class="prompt">PS&gt; </span><span class="blu">Copy-Item</span> .env.example .env</pre>
 
     <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">② .env をエディタで開いて APIキーを入力</h3>
-    <p><span class="file-path">rakuten_pricing_saas/.env</span> を VS Code等で開き、以下の行を編集します：</p>
+    <p><span class="file-path">yahoo_pricing_saas/.env</span> を VS Code等で開き、以下の行を編集します：</p>
     <pre><span class="cmt"># 変更前（コピー直後の状態）</span>
-RAKUTEN_APPLICATION_ID=<span class="yel">your_rakuten_app_id_here</span>
+YAHOO_CLIENT_ID=<span class="yel">your_yahoo_client_id_here</span>
 
-<span class="cmt"># 変更後（あなたのアプリIDに書き換える）</span>
-RAKUTEN_APPLICATION_ID=<span class="grn">1234567890</span>  <span class="cmt">← ここに実際のIDを入力</span></pre>
+<span class="cmt"># 変更後（あなたのClient IDに書き換える）</span>
+YAHOO_CLIENT_ID=<span class="grn">dj0zaiZpPXh4eHh4eHh4</span>  <span class="cmt">← ここに実際のClient IDを入力</span></pre>
 
     <div class="callout warn">
-      <strong>楽天アプリIDの確認場所：</strong><br />
-      <a href="https://webservice.rakuten.co.jp/app/list" style="color:#3b82d4">https://webservice.rakuten.co.jp/app/list</a> にログインし、
-      アプリ一覧から「アプリID（applicationId）」をコピーしてください。
+      <strong>Yahoo! Client IDの確認場所：</strong><br />
+      <a href="https://developer.yahoo.co.jp/" style="color:#3b82d4">Yahoo! JAPAN デベロッパーネットワーク</a> にログインし、
+      アプリ管理ページから「Client ID」をコピーしてください。
     </div>
 
     <div class="card">
@@ -136,7 +136,7 @@ RAKUTEN_APPLICATION_ID=<span class="grn">1234567890</span>  <span class="cmt">�
 PORT=<span class="yel">8000</span>
 
 <span class="cmt"># ↓ ここだけ今すぐ入力すればOK</span>
-RAKUTEN_APPLICATION_ID=<span class="grn">あなたのアプリID</span>
+YAHOO_CLIENT_ID=<span class="grn">あなたのClient ID</span>
 
 <span class="cmt"># ↓ 以下はSTEP 2以降で設定するので今は空欄でOK</span>
 DATABASE_URL=postgresql+asyncpg://...
@@ -159,7 +159,7 @@ SECRET_KEY=</pre>
     </p>
 
     <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">① 仮想環境を作成して有効化（初回のみ）</h3>
-    <pre><span class="cmt"># rakuten_pricing_saas ディレクトリの中で実行</span>
+    <pre><span class="cmt"># yahoo_pricing_saas ディレクトリの中で実行</span>
 <span class="prompt">PS&gt; </span>python -m venv .venv
 
 <span class="cmt"># 有効化（Windows PowerShell）</span>
@@ -181,7 +181,7 @@ SECRET_KEY=</pre>
       <tr><th>ライブラリ</th><th>役割</th><th>なぜこれ？</th></tr>
       <tr>
         <td><code>httpx</code></td>
-        <td>楽天APIへのHTTPリクエスト送信</td>
+        <td>Yahoo! Shopping APIへのHTTPリクエスト送信</td>
         <td>後でFastAPIの非同期処理（async）でも同じライブラリを使う。requests より将来性が高い</td>
       </tr>
       <tr>
@@ -206,39 +206,39 @@ python-dotenv  1.x.x</pre>
     <h2>スクリプトを実行して動作確認する</h2>
 
     <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">① 対話モードで実行（キーワードを入力）</h3>
-    <pre><span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>python test_rakuten_api.py
+    <pre><span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>python test_yahoo_api.py
 
 <span class="cmt"># プロンプトが表示される</span>
 検索キーワードを入力してください（例: Nintendo Switch）: <span class="yel">Nintendo Switch</span></pre>
 
     <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">② コマンドライン引数で直接実行（スペース入りは引用符で囲む）</h3>
-    <pre><span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>python test_rakuten_api.py <span class="str">"Nintendo Switch"</span>
-<span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>python test_rakuten_api.py <span class="str">"ボールペン 10本"</span></pre>
+    <pre><span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>python test_yahoo_api.py <span class="str">"Nintendo Switch"</span>
+<span class="grn">(.venv)</span> <span class="prompt">PS&gt; </span>python test_yahoo_api.py <span class="str">"ボールペン 10本"</span></pre>
 
     <h3 style="margin:12px 0 6px;font-size:13.5px;font-weight:700">③ 成功時の出力例</h3>
-    <pre><span class="grn">🔍 「Nintendo Switch」で楽天市場を検索中...
+    <pre><span class="grn">🔍 「Nintendo Switch」でYahoo!ショッピングを検索中...
 
 ────────────────────────────────────────────────────────────
-  検索結果 上位 3 件
+  検索結果 上位 3 件  （合計 82,341 件ヒット）
 ────────────────────────────────────────────────────────────
 
   [1]  Nintendo Switch 本体 Joy-Con (L) ネオンブルー/(R) ネオンレッド
        価格  : ¥<span class="yel">32,978</span>（税込）
        店舗  : ○○ショップ
-       URL   : https://item.rakuten.co.jp/...
+       URL   : https://store.shopping.yahoo.co.jp/...
 
   [2]  Nintendo Switch（有機ELモデル） Joy-Con(L)/(R) ホワイト
        価格  : ¥<span class="yel">37,980</span>（税込）
        店舗  : △△電機
-       URL   : https://item.rakuten.co.jp/...
+       URL   : https://store.shopping.yahoo.co.jp/...
 
   [3]  【中古】Nintendo Switch 本体のみ
        価格  : ¥<span class="yel">18,500</span>（税込）
        店舗  : □□リサイクル
-       URL   : https://item.rakuten.co.jp/...
+       URL   : https://store.shopping.yahoo.co.jp/...
 
 ────────────────────────────────────────────────────────────
-  ✅ 取得完了！（合計 17,429 件がヒットしました）
+  ✅ 取得完了！
 ────────────────────────────────────────────────────────────</span></pre>
   </div>
 </div>
@@ -252,14 +252,14 @@ python-dotenv  1.x.x</pre>
     <table>
       <tr><th>エラーメッセージ</th><th>原因</th><th>解決方法</th></tr>
       <tr>
-        <td><code>❌ RAKUTEN_APPLICATION_ID が設定されていません</code></td>
-        <td><code>.env</code> ファイルがない、またはIDが <code>your_rakuten_app_id_here</code> のまま</td>
-        <td><code>.env.example</code> を <code>.env</code> にコピーしてIDを正しく入力する</td>
+        <td><code>❌ YAHOO_CLIENT_ID が設定されていません</code></td>
+        <td><code>.env</code> ファイルがない、またはIDが <code>your_yahoo_client_id_here</code> のまま</td>
+        <td><code>.env.example</code> を <code>.env</code> にコピーしてClient IDを正しく入力する</td>
       </tr>
       <tr>
-        <td><code>HTTP 401</code></td>
-        <td>Application ID が無効または期限切れ</td>
-        <td>楽天 Web Services にログインしてIDを再確認する</td>
+        <td><code>HTTP 400 / 403</code></td>
+        <td>Client ID が無効またはAPIアクセス権なし</td>
+        <td>Yahoo! デベロッパーネットワークでClient IDを再確認する</td>
       </tr>
       <tr>
         <td><code>HTTP 429</code></td>
@@ -291,12 +291,12 @@ python-dotenv  1.x.x</pre>
 <h2 style="font-size:15px;font-weight:700;margin-bottom:12px">📖 スクリプトの構造（何がどこで何をしているか）</h2>
 
 <div class="card">
-  <h3>test_rakuten_api.py の4つのブロック</h3>
+  <h3>test_yahoo_api.py の4つのブロック</h3>
   <table style="margin-top:8px">
     <tr><th>ブロック</th><th>やっていること</th><th>本番実装との関係</th></tr>
     <tr>
       <td>① <code>load_dotenv()</code></td>
-      <td><code>.env</code> を読み込んで<br /><code>RAKUTEN_APPLICATION_ID</code> を取得</td>
+      <td><code>.env</code> を読み込んで<br /><code>YAHOO_CLIENT_ID</code> を取得</td>
       <td>本番では <code>pydantic-settings</code> の <code>get_settings()</code> が同じ役割をする</td>
     </tr>
     <tr>
@@ -305,13 +305,13 @@ python-dotenv  1.x.x</pre>
       <td>本番のクローラー（<code>crawl_service.py</code>）でも同じパラメーターを使う</td>
     </tr>
     <tr>
-      <td>③ <code>httpx.get()</code></td>
-      <td>楽天APIにHTTPリクエストを送信してJSONを受け取る</td>
-      <td>本番では <code>httpx.AsyncClient</code>（非同期版）に切り替える</td>
+      <td>③ <code>httpx.AsyncClient</code></td>
+      <td>Yahoo! Shopping APIにHTTPリクエストを送信してJSONを受け取る</td>
+      <td>本番では <code>YahooShoppingClient</code>（<code>app/services/yahoo.py</code>）が同じ処理を担う</td>
     </tr>
     <tr>
       <td>④ エラーハンドリング</td>
-      <td>401・429・タイムアウトを個別にキャッチして日本語メッセージを表示</td>
+      <td>400・403・429・タイムアウトを個別にキャッチして日本語メッセージを表示</td>
       <td>本番のレートリミット制御（Token Bucket）の前段となる概念</td>
     </tr>
   </table>
@@ -325,7 +325,7 @@ python-dotenv  1.x.x</pre>
   <tr><th>STEP</th><th>内容</th><th>追加要素</th></tr>
   <tr style="background:#dcfce7">
     <td><strong>✅ STEP 1</strong></td>
-    <td>楽天APIを呼び出して価格を取得する</td>
+    <td>Yahoo! Shopping APIを呼び出して価格を取得する</td>
     <td><code>httpx</code>, <code>python-dotenv</code></td>
   </tr>
   <tr>
